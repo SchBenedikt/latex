@@ -1,0 +1,216 @@
+\documentclass[11pt,a4paper]{article}
+
+% ----------------------------------------------------------- Pakete
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{margin=2.5cm, headsep=12pt}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  citecolor=green!40!black,
+  urlcolor=blue!60!black,
+  pdftitle={Messung von Satzqualität},
+}
+\usepackage{cleveref}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!30},
+  keywordstyle=\color{blue!60!black}\bfseries,
+  commentstyle=\color{green!40!black}\itshape,
+  showstringspaces=false,
+  language=[LaTeX]TeX,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Satzqualität -- Demoartikel}
+\fancyhead[R]{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{Messung von Satzqualität\\[0.4em]\large Ein vollständiges \LaTeX-Demoprojekt}
+\author{Erika Beispiel \and Max Muster}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  Dieses Demoprojekt zeigt alle Funktionen von \emph{LaTeX Studio} an einem
+  realistischen Anwendungsfall: mehrere Abbildungen, Tabellen, Programmcode,
+  Verweise auf Gleichungen und Abschnitte, Zitate aus einer Literaturdatenbank
+  sowie eine automatisch erzeugte Gliederung. Es eignet sich hervorragend zum
+  Ausprobieren von Auto-Build, SyncTeX und der Projektweiten Suche.
+\end{abstract}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=16mm and 20mm,
+      box/.style={draw, rounded corners=2pt, fill=blue!8, minimum height=9mm, align=center},
+      arr/.style={-{Stealth[length=2.6mm]}, thick, black!60},
+    ]
+    \node[box] (src) {Quelltext\\(.tex)};
+    \node[box, right=of src] (eng) {Engine\\(pdf\LaTeX)};
+    \node[box, right=of eng] (pdf) {PDF};
+    \node[box, below=of pdf, fill=orange!12] (sync) {SyncTeX};
+    \node[box, below=of src, fill=green!10] (ui) {Editor};
+    \draw[arr] (src) -- (eng);
+    \draw[arr] (eng) -- (pdf);
+    \draw[arr] (pdf) -- (sync);
+    \draw[arr] (sync) -- (ui);
+    \draw[arr] (ui) -- (src);
+  \end{tikzpicture}
+  \caption{Der Build-Kreislauf von \emph{LaTeX Studio} mit SyncTeX-Rücksprung.}
+  \label{fig:pipeline}
+\end{figure}
+
+\section{Einleitung}
+\label{sec:intro}
+
+Satzqualität entsteht dort, wo Trennung von Inhalt und Gestaltung konsequent
+durchgezogen wird~\cite{lamport1994}. Während Textverarbeitungen Formatierung
+am Absatz speichern, beschreibt \LaTeX\ die \emph{Bedeutung} eines Bausteins;
+die Gestaltung erfolgt in Klassen und Paketen~\cite{kopka2003,mittelbach2004}.
+
+\cref{fig:pipeline} zeigt den Kreislauf aus Quelltext, Kompilierung und
+Rücksprung in den Editor. In \cref{sec:methode} beschreiben wir die Messgrößen,
+in \cref{sec:ergebnisse} folgen die Ergebnisse.
+
+\section{Messverfahren}
+\label{sec:methode}
+
+\subsection{Metriken}
+
+Wir bewerten ein Dokument mit dem gewichteten Summenmaß
+\begin{equation}
+  \label{eq:score}
+  Q \;=\; \frac{\sum_{i=1}^{n} w_i \, s_i}{\sum_{i=1}^{n} w_i},
+  \qquad w_i > 0,\; s_i \in [0,1],
+\end{equation}
+wobei $s_i$ den Wert der $i$-ten Metrik und $w_i$ deren Gewicht bezeichnet.
+Eine ergänzende Fehlermaßzahl ist die mittlere Abweichung
+\begin{align}
+  \bar{e} &= \frac{1}{n}\sum_{i=1}^{n}\bigl|s_i - \hat{s}_i\bigr|
+  \label{eq:mae}\\
+  \operatorname{RMSE} &= \sqrt{\frac{1}{n}\sum_{i=1}^{n}\bigl(s_i - \hat{s}_i\bigr)^2}.
+  \label{eq:rmse}
+\end{align}
+Nach \cref{eq:score} ist $Q$ genau dann groß, wenn alle Gewichte auf
+hohe Einzelwerte zielen.
+
+\subsection{Implementierung}
+
+Die Auswertung ist als kurzes \LaTeX-Makro skizziert in
+\cref{lst:makro}.
+
+\begin{lstlisting}[caption={Gewichtete Mittelwertbildung}, label={lst:makro}]
+\newcommand{\gewichtet}[1]{%
+  \num{\frac{#1}{\n}}%
+}
+\end{lstlisting}
+
+\section{Ergebnisse}
+\label{sec:ergebnisse}
+
+\subsection{Vergleich der Verfahren}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Ergebnisse der Qualitätsmessung (Mittelwerte über 30 Läufe).}
+  \label{tab:ergebnisse}
+  \begin{tabular}{l S[table-format=1.3] S[table-format=1.3] S[table-format=1.2]}
+    \toprule
+    Verfahren & {$Q$} & {$\bar{e}$} & {Laufzeit (\si{\second})} \\
+    \midrule
+    Regelbasiert   & 0,712 & 0,148 & 1,24 \\
+    Lerndbasiert   & 0,847 & 0,091 & 3,86 \\
+    Hybrid         & 0,871 & 0,082 & 3,41 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Verlauf über die Epochen}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.86\linewidth,
+        height=6cm,
+        xlabel={Epoche},
+        ylabel={Qualität $Q$},
+        xmin=1, xmax=10,
+        ymin=0.4, ymax=1.0,
+        grid=major,
+        grid style={black!12},
+        legend style={at={(0.02,0.98)}, anchor=north west, font=\small, draw=black!30},
+      ]
+      \addplot[blue, thick, mark=*, mark size=1.8] coordinates {
+        (1,0.52) (2,0.61) (3,0.68) (4,0.73) (5,0.77)
+        (6,0.80) (7,0.83) (8,0.85) (9,0.86) (10,0.871)
+      };
+      \addplot[red, thick, dashed, mark=square*, mark size=1.6] coordinates {
+        (1,0.50) (2,0.56) (3,0.62) (4,0.66) (5,0.70)
+        (6,0.72) (7,0.74) (8,0.75) (9,0.76) (10,0.768)
+      };
+      \legend{Hybrid, Regelbasiert}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Konvergenz über zehn Epochen. Die Kurven entsprechen den Werten aus
+    \cref{tab:ergebnisse}.}
+  \label{fig:konvergenz}
+\end{figure}
+
+Wie \cref{fig:konvergenz} zeigt, nähern sich beide Verfahren einem Wert von
+$Q \approx 0{,}87$ an; der hybride Ansatz liegt dabei durchgehend oben.
+
+\section{Diskussion}
+\label{sec:diskussion}
+
+\begin{itemize}[leftmargin=*]
+  \item Die Gewichtung in \cref{eq:score} empfindlich zu wählen, verändert das
+    Ranking der Verfahren.
+  \item \cref{eq:rmse} bestraft Ausreißer stärker als \cref{eq:mae}.
+  \item Die Laufzeiten in \cref{tab:ergebnisse} skalieren linear mit der Zahl
+    der Metriken.
+\end{itemize}
+
+Offen bleibt die Frage, ob sich die Gewichte $w_i$ automatisch aus
+Bestandsdaten ableten lassen~\cite{mittelbach2004}.
+
+\section{Fazit}
+\label{sec:fazit}
+
+Mit einem einzigen Quelltext entstehen Gliederung, Abbildungen, Tabellen,
+Code listings und ein konsistentes Literaturverzeichnis. Genau das macht
+\emph{LaTeX Studio} zum passenden Werkzeug für dieses Vorgehen.
+
+% TODO: Abschnitt zu Ausblick und Reproduzierbarkeit ergänzen
+
+\clearpage
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

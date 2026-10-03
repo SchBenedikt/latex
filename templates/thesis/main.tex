@@ -1,0 +1,57 @@
+\documentclass[12pt,a4paper,ngerman]{scrreprt}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=3cm,bindingoffset=0.5cm}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{csquotes}
+\usepackage[style=alphabetic,backend=biber]{biblatex}
+\addbibresource{references.bib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=blue!50!black}
+\usepackage{cleveref}
+
+\title{Titel der Abschlussarbeit}
+\author{Vorname Nachname}
+\date{\today}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  {\scshape\LARGE Beispiel-Universität\par}
+  {\large Fakultät für Informatik\par}
+  \vspace{3cm}
+  {\huge\bfseries Titel der Abschlussarbeit\par}
+  \vspace{2cm}
+  {\Large Vorname Nachname\par}
+  \vfill
+  {\large \today\par}
+\end{titlepage}
+
+\begin{abstract}
+  Hier steht die Zusammenfassung der Arbeit (maximal eine Seite).
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\mainmatter
+\input{chapters/kapitel1}
+\input{chapters/kapitel2}
+
+\appendix
+\input{chapters/anhang}
+
+\backmatter
+\printbibliography[title={Literaturverzeichnis}]
+
+\end{document}

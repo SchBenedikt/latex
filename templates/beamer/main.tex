@@ -1,0 +1,75 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+\usetheme{metropolis}
+\usepackage{appendixnumberbeamer}
+
+\title{Ein moderner \LaTeX-Editor}
+\subtitle{Live-Vorschau, SyncTeX, Autocomplete}
+\author{Max Mustermann}
+\institute{Beispiel-Institut}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Agenda}
+  \tableofcontents
+\end{frame}
+
+\section{Überblick}
+
+\begin{frame}{Warum ein eigener Editor?}
+  \begin{block}{Vorteile}
+    \begin{itemize}
+      \item Volle Kontrolle über Werkzeuge und Pakete
+      \item Lokale Daten – keine Cloud-Abhängigkeit
+      \item SyncTeX: Klick ins PDF springt in den Quelltext
+    \end{itemize}
+  \end{block}
+
+  \begin{alertblock}{Nachteil}
+    Kein Multi-User-Kollaborationsmodus (by design).
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Mathematik in Folien}
+  \begin{align}
+    \hat{f}(\xi) &= \int_{-\infty}^{\infty} f(x)\,e^{-2\pi i x \xi}\,dx \\
+    \|A\|_2 &= \max_{\|x\|=1} \|Ax\|_2
+  \end{align}
+\end{frame}
+
+\section{Details}
+
+\begin{frame}{Aufbau}
+  \begin{enumerate}
+    \item Editor mit Syntaxhervorhebung
+    \item Build-System mit \texttt{latexmk}
+    \item PDF-Vorschau mit SyncTeX-Anbindung
+    \item Outline, Fehlerliste, Symbolpalette
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]{Code in Folien}
+\begin{verbatim}
+\begin{equation}
+  e^{i\pi} + 1 = 0
+\end{equation}
+\end{verbatim}
+\end{frame}
+
+\begin{frame}{Ausblick}
+  \Huge\centering Vielen Dank für die Aufmerksamkeit!\\[1em]
+  \normalsize Fragen?
+\end{frame}
+
+\end{document}

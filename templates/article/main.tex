@@ -1,0 +1,124 @@
+\documentclass[12pt,a4paper]{article}
+
+% ----------------------------------------------------------- Pakete
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=green!40!black,urlcolor=blue!60!black}
+\usepackage{cleveref}
+
+\title{Ein modernes \LaTeX-Dokument}
+\author{Max Mustermann \\ \texttt{max@example.org}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  Dieses Dokument demonstriert die wichtigsten Funktionen eines vollständigen
+  \LaTeX-Editors: Syntaxhervorhebung, Autocomplete, Live-Vorschau, SyncTeX,
+  Gliederungs-Outline und Fehleranalyse.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Einleitung}
+\label{sec:intro}
+\LaTeX\ ist das Standard-System für wissenschaftliche Publikationen. Es trennt
+Inhalt und Formatierung zuverlässig voneinander~\cite{lamport1994}.
+
+Ein Referenz auf \cref{sec:math} zeigt, wie \texttt{cleveref} automatisch
+nummerierte Verweise erzeugt.
+
+\section{Mathematik}
+\label{sec:math}
+
+Die Euler-Identität ist eine der schönsten Gleichungen der Mathematik:
+\begin{equation}
+  \label{eq:euler}
+  e^{i\pi} + 1 = 0
+\end{equation}
+
+Vektoren und Matrizen lassen sich bequem setzen:
+\begin{align}
+  \vec{a} \times \vec{b} &= \begin{pmatrix} a_2b_3 - a_3b_2 \\ a_3b_1 - a_1b_3 \\ a_1b_2 - a_2b_1 \end{pmatrix}
+  \label{eq:cross}\\
+  A^{-1} &= \frac{1}{\det(A)}\,\operatorname{adj}(A)
+  \label{eq:inv}
+\end{align}
+
+Nach \cref{eq:euler} und \cref{eq:cross} folgt ein weiteres Beispiel mit
+SI-Einheiten: \SI{9{,}81}{\meter\per\square\second}.
+
+\section{Listen und Tabellen}
+
+\subsection{Aufzählung}
+\begin{itemize}
+  \item Vorteil: hohe Typografiequalität
+  \item Vorteil: Trennung von Inhalt und Gestaltung
+  \begin{enumerate}
+    \item verschachtelte Nummerierung
+    \item weitere Ebene
+  \end{enumerate}
+\end{itemize}
+
+\subsection{Tabelle}
+\label{tab:vergleich}
+\begin{table}[htbp]
+  \centering
+  \caption{Vergleich von Satzsystemen}
+  \label{tab:satzsysteme}
+  \begin{tabular}{lrr}
+    \toprule
+    System        & {Jahrgang} & {Marktanteil (\%)} \\
+    \midrule
+    \LaTeX        & 1984 & 31,2 \\
+    Word          & 1983 & 55,7 \\
+    Troff/nroff   & 1973 &  2,1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Siehe \cref{tab:vergleich} und \cref{tab:satzsysteme}.
+
+\section{Abbildungen}
+\label{sec:figures}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.6\linewidth}{\centering\vspace{1.5cm}
+    Platzhalter für eine Grafik\\
+    (\texttt{includegraphics} einsetzen)\vspace{1.5cm}}}
+  \caption{So sieht eine Abbildung aus.}
+  \label{fig:placeholder}
+\end{figure}
+
+\section{Literatur}
+\label{sec:literatur}
+
+Zitiert wird mit \texttt{\textbackslash cite}\texttt{\{...\}}, siehe
+\cite{lamport1994,kopka2003,mittelbach2004}. Das Literaturverzeichnis wird
+automatisch aus der Datei \texttt{references.bib} erzeugt.
+
+\section{Fazit}
+\label{sec:fazit}
+Alles funktioniert – von \cref{sec:intro} bis hierhin.
+
+% TODO: Zusammenfassung noch ergänzen
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

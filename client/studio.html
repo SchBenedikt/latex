@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LaTeX Studio</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/client/styles/app.css?v=studio-4" />
+  <link rel="stylesheet" href="/client/styles/workspace.css?v=studio-4" />
+</head>
+<body>
+<div id="app" class="layout">
+
+  <header id="topbar">
+    <button id="btn-sidebar" class="tb-btn icon-button" title="Toggle file navigation" aria-label="Toggle file navigation" aria-pressed="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+    <a class="brand" href="/" title="LaTeX Studio home"><span class="brand-mark" aria-hidden="true">λ</span><span class="brand-name">LaTeX Studio</span></a>
+    <div class="tb-group project-context">
+      <div class="project-title">
+      <select id="project-select" class="tb-select" title="Switch project" aria-label="Switch project"></select>
+      <button id="btn-project-menu" class="tb-btn icon-button" title="Project menu" aria-label="Project menu" data-icon="more"></button>
+      </div>
+      <span id="header-save-state" role="status" aria-live="polite">Saved</span>
+    </div>
+    <div class="tb-flex"></div>
+    <div id="workspace-toolbar" role="toolbar" aria-label="Document tools">
+      <button id="btn-command" class="tb-btn command-button" data-icon="search" data-icon-label="Search" title="Search commands (Ctrl+Shift+P)" aria-label="Search commands"></button>
+      <div class="view-switch" role="group" aria-label="Workspace view">
+        <button data-workspace-view="source" data-icon="source" data-icon-label="Source" aria-label="Source" aria-pressed="false" title="Show source only"></button>
+        <button data-workspace-view="split" data-icon="split" data-icon-label="Split" aria-label="Split view" aria-pressed="true" title="Source and PDF side by side"></button>
+        <button data-workspace-view="preview" data-icon="file" data-icon-label="PDF" aria-label="PDF view" aria-pressed="false" title="Show PDF only"></button>
+      </div>
+      <div class="compile-control">
+        <button id="btn-build" class="tb-btn primary" title="Build (Ctrl+B / F5)" data-icon="play" data-icon-label="Build"></button>
+        <details class="toolbar-menu build-menu">
+          <summary data-icon="chevron-down" role="button" title="Build settings" aria-label="Build settings"></summary>
+          <div class="toolbar-menu-items">
+            <span class="menu-heading">Build</span>
+            <label class="menu-field"><span>TeX engine</span><select id="engine-select" class="tb-select"><option value="pdflatex">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option><option value="platex">pLaTeX</option></select></label>
+            <button id="btn-autobuild" class="tb-btn toggle" title="Build automatically while typing" aria-pressed="false">Auto build</button>
+            <hr/>
+            <button id="btn-packages" class="tb-btn" data-icon="package" data-icon-label="Manage packages" title="Check and manage LaTeX packages"></button>
+          </div>
+        </details>
+      </div>
+      <details class="toolbar-menu app-menu">
+        <summary data-icon="more" role="button" title="More tools" aria-label="More tools"></summary>
+        <div class="toolbar-menu-items">
+          <span class="menu-heading">Document</span>
+          <button id="btn-save" class="tb-btn" data-icon="save" data-icon-label="Save" title="Save (Ctrl+S)"></button>
+          <button id="btn-console" class="tb-btn" data-icon="terminal" data-icon-label="Show console" title="Toggle console (Ctrl+J)"></button>
+          <button id="btn-preview" class="tb-btn" data-icon="eye" data-icon-label="Toggle PDF preview" title="Toggle PDF preview"></button>
+          <hr/><span class="menu-heading">Project</span>
+          <button id="btn-new-project" class="tb-btn" data-icon="plus" data-icon-label="New project" title="Create a new project"></button>
+          <button id="btn-export" class="tb-btn" data-icon="download" data-icon-label="Export project" title="Export project as ZIP"></button>
+          <button id="btn-import" class="tb-btn" data-icon="folder" data-icon-label="Import project" title="Import project from ZIP"></button>
+          <button id="btn-demos" class="tb-btn" data-icon="book" data-icon-label="Sample projects" title="Add sample projects"></button>
+          <hr/><span class="menu-heading">Workspace</span>
+          <button id="btn-settings" class="tb-btn" data-icon="settings" data-icon-label="Settings" title="Settings"></button>
+          <button id="btn-theme" class="tb-btn" data-icon="theme" data-icon-label="Toggle light/dark theme" title="Change theme"></button>
+          <button id="btn-help" class="tb-btn" data-icon="help" data-icon-label="Keyboard shortcuts" title="Keyboard shortcuts (F1)"></button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <!-- ============================================================== MAIN -->
+  <div id="main" data-view="split">
+
+    <!-- ---------------------------------------------------------- Sidebar -->
+    <aside id="sidebar">
+      <nav id="rail">
+        <button class="rail-btn active" data-panel="files" title="Files" data-icon="folder">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
+        </button>
+        <button class="rail-btn" data-panel="outline" title="Outline" data-icon="list">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 6h2v2H4V6Zm4 0h12v2H8v-2Zm-4 5h2v2H4v-2Zm4 0h12v2H8v-2Zm-4 5h2v2H4v-2Zm4 0h12v2H8v-2Z"/></svg>
+        </button>
+        <button class="rail-btn" data-panel="search" title="Project search (Ctrl+Shift+F)" data-icon="search">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
+        </button>
+        <button class="rail-btn" data-panel="symbols" title="Symbols" data-icon="symbols">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 4 7v10l8 5 8-5V7l-8-5Zm0 2.3 5.7 3.56v7.28L12 19.7l-5.7-3.56V7.86L12 4.3Zm-1 4.2v2H8v1.5h3v2h1.5v-2h3V10.5h-3v-2H11Z"/></svg>
+        </button>
+</nav>
+
+      <div id="panels">
+        <!-- Files -->
+        <section class="panel active" data-panel="files">
+          <header class="panel-head">
+            <span>Files</span>
+            <details class="toolbar-menu file-menu">
+              <summary data-icon="plus" role="button" aria-label="File actions" title="Manage files"></summary>
+              <div class="toolbar-menu-items">
+                <button id="btn-new-file" class="tb-btn" data-icon="file" data-icon-label="New file" title="New file"></button>
+                <button id="btn-new-folder" class="tb-btn" data-icon="folder" data-icon-label="New folder" title="New folder"></button>
+                <button id="btn-upload" class="tb-btn" data-icon="external" data-icon-label="Upload files" title="Upload files"></button>
+                <button id="btn-refresh-tree" class="tb-btn" data-icon="refresh" data-icon-label="Refresh" title="Refresh"></button>
+              </div>
+            </details>
+          </header>
+          <div id="filetree" class="panel-body" tabindex="0"></div>
+          <input type="file" id="file-upload-input" hidden multiple />
+          <input type="file" id="zip-upload-input" hidden accept=".zip,application/zip" />
+          <input type="file" id="bib-upload-input" hidden accept=".bib,text/plain,application/x-bibtex" />
+        </section>
+
+        <!-- Outline -->
+        <section class="panel" data-panel="outline">
+          <header class="panel-head"><span>Outline</span></header>
+          <div id="outline" class="panel-body"></div>
+        </section>
+
+        <!-- Search -->
+        <section class="panel" data-panel="search">
+          <header class="panel-head"><span>Project search</span></header>
+          <div class="search-form">
+            <input type="search" id="search-input" placeholder="Search for …" />
+            <input type="text" id="search-replace" placeholder="Replace with …" />
+            <div class="search-opts">
+              <label><input type="checkbox" id="search-regex" /> Regex</label>
+              <label><input type="checkbox" id="search-case" /> Match case</label>
+              <label><input type="checkbox" id="search-word" /> Whole word</label>
+            </div>
+            <div class="search-actions">
+              <button id="search-replace-one" title="Replace first">Replace</button>
+              <button id="search-replace-all" title="Replace all matches in the project">Replace all</button>
+            </div>
+            <div id="search-stats" class="search-stats"></div>
+          </div>
+          <div id="search-results" class="panel-body"></div>
+        </section>
+
+        <!-- Symbols -->
+        <section class="panel" data-panel="symbols">
+          <header class="panel-head"><span>Symbols</span></header>
+          <div class="search-form">
+            <input type="search" id="symbol-filter" placeholder="Find a symbol …" />
+            <div id="symbol-cats" class="chip-row"></div>
+          </div>
+          <div id="symbol-grid" class="panel-body symbol-grid"></div>
+        </section>
+      </div>
+
+      <div id="sidebar-splitter" class="vsplitter" title="Adjust sidebar width"></div>
+    </aside>
+
+    <!-- ---------------------------------------------------------- Editor -->
+    <div id="editor-pane">
+      <div id="tabbar" role="tablist"></div>
+      <div id="breadcrumb" class="hidden" aria-label="Path"></div>
+      <div id="editor-host"></div>
+      <div id="welcome" class="welcome">
+        <div class="welcome-card">
+          <h1>LaTeX Studio</h1>
+          <p>A local LaTeX editor with a live preview, SyncTeX, and autocomplete.</p>
+          <div class="welcome-actions">
+            <button data-action="new-project">New project</button>
+            <button data-action="demos">Sample projects <kbd>★</kbd></button>
+            <button data-action="build">Build project <kbd>Ctrl+B</kbd></button>
+            <button data-action="palette">Command palette <kbd>Ctrl+Shift+P</kbd></button>
+            <button data-action="shortcuts">Keyboard shortcuts <kbd>F1</kbd></button>
+          </div>
+          <ul class="welcome-tips">
+            <li><b>Ctrl+click</b> in the PDF → jump to source (SyncTeX)</li>
+            <li><b>Ctrl+Shift+G</b> → jump to the current line in the preview</li>
+            <li><b>Ctrl+Space</b> → autocomplete, <b>Ctrl+E</b> → environments</li>
+            <li><b>Project menu ⋯</b> → rename, duplicate, import or export ZIP</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="main-splitter" class="hsplitter" title="Resize preview"></div>
+
+    <!-- --------------------------------------------------------- Preview -->
+    <aside id="preview-pane">
+      <div id="pdf-toolbar" role="toolbar" aria-label="PDF tools">
+        <span class="pdf-title">Preview</span>
+        <div class="pdf-tool-group">
+          <button class="tb-btn" id="pdf-prev" title="Previous page" data-icon="previous"></button>
+          <input type="number" id="pdf-page" min="1" value="1" title="Page" aria-label="PDF page" />
+          <span id="pdf-pagecount" class="muted">/ –</span>
+          <button class="tb-btn" id="pdf-next" title="Next page" data-icon="next"></button>
+        </div>
+        <div class="tb-flex"></div>
+        <select id="pdf-zoom" class="tb-select" title="Zoom">
+          <option value="fit-width">Fit width</option>
+          <option value="fit-page">Page</option>
+          <option value="0.75">75 %</option>
+          <option value="1">100 %</option>
+          <option value="1.25">125 %</option>
+          <option value="1.5">150 %</option>
+          <option value="2">200 %</option>
+        </select>
+        <details class="toolbar-menu pdf-menu">
+          <summary data-icon="more" role="button" title="PDF tools" aria-label="More PDF tools"></summary>
+          <div class="toolbar-menu-items">
+            <button class="tb-btn" id="pdf-search-btn" title="Search PDF (Ctrl+F)" data-icon="search" data-icon-label="Search PDF"></button>
+            <button class="tb-btn" id="pdf-first" title="First page" data-icon="first" data-icon-label="First page"></button>
+            <button class="tb-btn" id="pdf-last" title="Last page" data-icon="last" data-icon-label="Last page"></button>
+            <hr/>
+            <button class="tb-btn" id="pdf-zoom-out" title="Zoom out" data-icon="minus" data-icon-label="Zoom out"></button>
+            <button class="tb-btn" id="pdf-zoom-in" title="Zoom in" data-icon="plus" data-icon-label="Zoom in"></button>
+            <button class="tb-btn" id="pdf-sync-toggle" title="SyncTeX: Klick im PDF springt in den Source" data-icon="sync" data-icon-label="SyncTeX"></button>
+            <hr/>
+            <button class="tb-btn" id="pdf-open" title="Open PDF in a new tab" data-icon="external" data-icon-label="Open in new tab"></button>
+            <button class="tb-btn" id="pdf-download" title="Download PDF" data-icon="download" data-icon-label="Download PDF"></button>
+          </div>
+        </details>
+      </div>
+      <div id="pdf-searchbar" hidden>
+        <input type="search" id="pdf-search-input" placeholder="Search in document …" />
+        <span id="pdf-search-info" class="muted"></span>
+        <button class="tb-btn" id="pdf-search-prev">▲</button>
+        <button class="tb-btn" id="pdf-search-next">▼</button>
+        <button class="tb-btn" id="pdf-search-close">✕</button>
+      </div>
+      <div id="pdf-viewer">
+        <div id="pdf-empty" class="pdf-empty">
+          <p>No PDF yet.</p>
+          <p class="muted">Build with <kbd>Ctrl+B</kbd> to see the preview here.</p>
+        </div>
+        <div id="pdf-pages"></div>
+      </div>
+      <div id="pdf-pagechip" class="hidden" aria-live="polite"></div>
+    </aside>
+  </div>
+
+  <!-- ======================================================= BOTTOM PANEL -->
+  <div id="bottom-panel" class="hidden">
+    <div id="bottom-splitter" class="hsplitter-up" title="Resize panel"></div>
+    <header id="bottom-head">
+      <button class="btab active" data-btab="console">Console</button>
+      <button class="btab" data-btab="problems">Problems <span id="problems-badge" class="badge hidden">0</span></button>
+      <button class="btab" data-btab="log">Latest log</button>
+      <div class="tb-flex"></div>
+      <span id="build-status" class="muted"></span>
+      <button id="btn-clear-console" class="tb-btn" title="Clear console">Clear</button>
+      <button id="btn-close-bottom" class="tb-btn" title="Close" data-icon="close">✕</button>
+    </header>
+    <div id="bottom-body">
+      <div class="bpane active" data-bpane="console"><pre id="console-out" class="console"></pre></div>
+      <div class="bpane" data-bpane="problems"><div id="problems-list"></div></div>
+      <div class="bpane" data-bpane="log"><pre id="log-out" class="console"></pre></div>
+    </div>
+  </div>
+
+  <!-- ========================================================== STATUSBAR -->
+  <footer id="statusbar">
+    <span id="st-project" class="st-item" title="Active project"></span>
+    <span id="st-build" class="st-item st-btn" title="Build status"></span>
+    <span id="st-issues" class="st-item st-btn" title="Show problems"></span>
+    <div class="tb-flex"></div>
+    <span id="st-cursor" class="st-item">Line 1, column 1</span>
+    <span id="st-words" class="st-item">0 words</span>
+    <span id="st-wrap" class="st-item st-btn" title="Toggle word wrap">Word wrap</span>
+    <span id="st-indent" class="st-item" title="Indentation">2 spaces</span>
+    <span id="st-enc" class="st-item">UTF-8</span>
+    <span id="st-latex" class="st-item">LaTeX</span>
+  </footer>
+</div>
+
+<!-- ============================================================= MODALS -->
+<div id="modal-root" class="hidden">
+  <!-- Project neu -->
+  <div class="modal" data-modal="new-project">
+    <div class="modal-card">
+      <h2>New project</h2>
+      <p class="modal-intro">Choose a template to start your document.</p>
+      <label class="field">
+        <span>Project name</span>
+        <input type="text" id="np-name" placeholder="e.g. Thesis" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Template</span>
+        <div id="np-templates" class="template-grid" role="radiogroup" aria-label="Document template"></div>
+      </label>
+      <div class="modal-actions">
+        <button class="tb-btn" data-close>Cancel</button>
+        <button class="tb-btn primary" id="np-create">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sample projects -->
+  <div class="modal" data-modal="demos">
+    <div class="modal-card wide">
+      <h2>Add sample projects</h2>
+      <p class="modal-note">Ready-to-use sample projects are copied into your workspace.
+        Explore building, SyncTeX, search, and the outline.</p>
+      <div id="demo-list" class="demo-list"></div>
+      <div class="modal-actions">
+        <button class="tb-btn" data-close>Cancel</button>
+        <button class="tb-btn primary" id="demo-create">Create selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="modal" data-modal="settings">
+    <div class="modal-card wide">
+      <h2>Settings</h2>
+      <p class="modal-intro">Customize your workspace and build settings.</p>
+      <div class="settings-sections">
+        <fieldset class="settings-section"><legend>Editor and appearance</legend><div class="settings-grid">
+          <label class="field"><span>Theme</span>
+          <select id="set-theme"><option value="dark">Dark</option><option value="light">Light</option><option value="system">System</option></select>
+        </label>
+          <label class="field"><span>Font size (px)</span>
+          <input type="number" id="set-fontsize" min="10" max="28" step="1" />
+        </label>
+          <label class="field"><span>Indentation (spaces)</span>
+          <select id="set-tabsize"><option>2</option><option>4</option><option>8</option></select>
+        </label>
+          <label class="field"><span>Word wrap</span>
+          <select id="set-wrap"><option value="off">Off</option><option value="on">On</option></select>
+        </label>
+        </div></fieldset>
+        <fieldset class="settings-section"><legend>Build</legend><div class="settings-grid">
+          <label class="field"><span>Default engine</span>
+          <select id="set-engine"><option value="pdflatex">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option><option value="platex">pLaTeX</option></select>
+        </label>
+          <label class="field"><span>Main file</span>
+          <input type="text" id="set-mainfile" placeholder="main.tex" />
+        </label>
+          <label class="field"><span>Build automatically</span>
+          <select id="set-autobuild"><option value="on">On (after a pause)</option><option value="off">Off</option></select>
+        </label>
+          <label class="field"><span>Build delay (ms)</span>
+          <input type="number" id="set-autodelay" min="300" max="5000" step="100" />
+        </label>
+          <label class="field"><span>Allow shell escape</span>
+          <select id="set-shellescape"><option value="off">No</option><option value="on">Yes (unsafe)</option></select>
+        </label>
+          <label class="field"><span>Generated auxiliary files</span>
+          <select id="set-showall"><option value="off">Hide</option><option value="on">Show</option></select>
+        </label>
+        </div></fieldset>
+        <fieldset class="settings-section"><legend>PDF and SyncTeX</legend><div class="settings-grid">
+          <label class="field"><span>Default PDF zoom</span>
+          <select id="set-pdfzoom"><option value="fit-width">Fit width</option><option value="fit-page">Page</option><option value="1">100 %</option><option value="1.25">125 %</option></select>
+        </label>
+          <label class="field"><span>PDF navigation</span>
+          <select id="set-sync"><option value="on">Ctrl+click</option><option value="always">Every click</option><option value="off">Off</option></select>
+        </label>
+        </div></fieldset>
+      </div>
+      <div class="modal-actions">
+        <button class="tb-btn" id="set-reset">Reset</button>
+        <div class="tb-flex"></div>
+        <button class="tb-btn" data-close>Cancel</button>
+        <button class="tb-btn primary" id="set-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Package and TeX package manager -->
+  <div class="modal" data-modal="packages">
+    <div class="modal-card wide package-card">
+      <div class="package-heading">
+        <div><h2>Packages and document classes</h2><p>Check package availability for this project and install missing packages.</p></div>
+        <div class="package-heading-actions"><button class="tb-btn" id="package-install-missing">Install missing</button><button class="tb-btn" id="package-refresh" title="Check again">Check again</button></div>
+      </div>
+      <div class="package-tools">
+        <input id="package-filter" type="search" placeholder="Filter packages used by this project …" />
+        <span id="package-summary" class="muted" aria-live="polite">Not checked yet</span>
+      </div>
+      <div id="package-list" class="package-list" aria-live="polite"></div>
+      <div class="package-custom">
+        <input id="package-name" type="text" placeholder="Package name, e.g. cleveref" autocomplete="off" />
+        <button id="package-install-custom" class="tb-btn">Install package</button>
+      </div>
+      <p class="package-note">Packages are installed through the detected local manager. Permission issues are reported with actionable details.</p>
+      <div class="modal-actions"><button class="tb-btn primary" data-close>Done</button></div>
+    </div>
+  </div>
+
+  <!-- Hilfe / Keyboard shortcuts -->
+  <div class="modal" data-modal="shortcuts">
+    <div class="modal-card wide">
+      <h2>Keyboard shortcuts &amp; features</h2>
+      <div id="shortcut-list" class="shortcut-list"></div>
+      <div class="modal-actions"><button class="tb-btn primary" data-close>Close</button></div>
+    </div>
+  </div>
+
+  <!-- Command palette -->
+  <div class="modal palette" data-modal="palette">
+    <div class="modal-card palette-card">
+      <input type="text" id="palette-input" aria-label="Search commands" placeholder="Type a command …" autocomplete="off" />
+      <div id="palette-list" class="palette-list"></div>
+      <div class="pal-foot">
+        <span class="pal-hint"><kbd>↑</kbd><kbd>↓</kbd> select</span>
+        <span class="pal-hint"><kbd>Enter</kbd> run</span>
+        <span class="pal-hint"><kbd>Esc</kbd> close</span>
+        <span class="tb-flex"></span>
+        <span id="palette-count" class="pal-count"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick open -->
+  <div class="modal palette" data-modal="quickopen">
+    <div class="modal-card palette-card">
+      <input type="text" id="quickopen-input" aria-label="Search files" placeholder="Open file …" autocomplete="off" />
+      <div id="quickopen-list" class="palette-list"></div>
+      <div class="pal-foot">
+        <span class="pal-hint"><kbd>↑</kbd><kbd>↓</kbd> select</span>
+        <span class="pal-hint"><kbd>Enter</kbd> open</span>
+        <span class="pal-hint"><kbd>Esc</kbd> close</span>
+        <span class="tb-flex"></span>
+        <span id="quickopen-count" class="pal-count"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation / input -->
+  <div class="modal" data-modal="prompt">
+    <div class="modal-card">
+      <h2 id="prompt-title">Input</h2>
+      <label class="field"><span id="prompt-label"></span><input type="text" id="prompt-input" autocomplete="off" /></label>
+      <div class="modal-actions">
+        <button class="tb-btn" data-close>Cancel</button>
+        <button class="tb-btn primary" id="prompt-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm template selection (duplicate use) -->
+  <div class="modal" data-modal="confirm">
+    <div class="modal-card">
+      <h2 id="confirm-title">Confirm</h2>
+      <p id="confirm-text"></p>
+      <div class="modal-actions">
+        <button class="tb-btn" data-close>Cancel</button>
+        <button class="tb-btn danger" id="confirm-ok">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="sync-flash" class="hidden"></div>
+
+<script src="/client/dist/app.js?v=studio-4"></script>
+</body>
+</html>

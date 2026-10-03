@@ -1,0 +1,184 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{listings}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+\usetheme{metropolis}
+
+\definecolor{accent}{RGB}{0,102,153}
+\metroset{titleformat=regular, numbering=fraction, progressbar=frametitle}
+
+\title{Automatisierte Dokumentation}
+\subtitle{Von der Quelle zum geprüften PDF}
+\author{Erika Beispiel}
+\institute{Beispiel-Institut für Technische Kommunikation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Agenda}
+  \tableofcontents
+\end{frame}
+
+\section{Motivation}
+
+\begin{frame}{Warum Automatisierung?}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Manuell}
+      \begin{itemize}
+        \item Word-Dateien mit Formatverlust
+        \item Verweise brechen beim Umbauen
+        \item Keine reproduzierbaren Stände
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Automatisiert}
+      \begin{itemize}
+        \item Quelltext als einzige Wahrheit
+        \item Verweise und Zitate automatisch
+        \item Jeder Stand per ZIP exportierbar
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{1em}
+  \begin{alertblock}{Kernsatz}
+    Dokumentation ist Software: Sie gehört ins Versions­system und in die
+    Pipeline~\cite{knuth1984}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Der Build-Kreislauf}
+  \centering
+  \begin{tikzpicture}[
+      node distance=15mm,
+      st/.style={draw, rounded corners=3pt, minimum height=9mm, minimum width=25mm,
+                 align=center, fill=accent!8},
+      ar/.style={-{Stealth[length=2.6mm]}, thick, accent},
+    ]
+    \node[st] (a) {Quelltext};
+    \node[st, right=of a] (b) {latexmk};
+    \node[st, right=of b] (c) {PDF};
+    \node[st, below=of b, fill=orange!15] (d) {Log-Auswertung};
+    \draw[ar] (a) -- (b);
+    \draw[ar] (b) -- (c);
+    \draw[ar] (b) -- (d);
+    \draw[ar, red!70!black, dashed] (d.west) -- node[above=1.5mm, font=\small]{Fix} (a.south);
+  \end{tikzpicture}
+
+  \vspace{1em}
+  \footnotesize SyncTeX verbindet jede PDF-Position mit der Quellzeile.
+\end{frame}
+
+\section{Verfahren}
+
+\begin{frame}{Metriken}
+  Die Gesamtqualität ergibt sich als gewichteter Mittelwert
+  \begin{equation*}
+    Q \;=\; \frac{\sum_{i=1}^{n} w_i s_i}{\sum_{i=1}^{n} w_i},
+    \qquad s_i \in [0,1].
+  \end{equation*}
+
+  \pause
+  \begin{block}{Eigenschaften}
+    \begin{itemize}
+      \item Skalierungsinvariant gegenüber der Zahl der Metriken
+      \item $Q = 1$ genau dann, wenn alle $s_i = 1$
+      \item Empfindlich gegenüber der Gewichtung $w_i$
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Messergebnisse}
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+        width=0.86\textwidth,
+        height=5.4cm,
+        xlabel={Epoche},
+        ylabel={$Q$},
+        xmin=1, xmax=10, ymin=0.4, ymax=1.0,
+        grid=major, grid style={black!15},
+        legend style={at={(0.02,0.98)}, anchor=north west, draw=black!30, font=\small},
+      ]
+      \addplot[accent, very thick, mark=*, mark size=1.8] coordinates {
+        (1,0.52) (2,0.61) (3,0.68) (4,0.73) (5,0.77)
+        (6,0.80) (7,0.83) (8,0.85) (9,0.86) (10,0.871)
+      };
+      \addplot[red!70!black, thick, dashed] coordinates {
+        (1,0.50) (2,0.56) (3,0.62) (4,0.66) (5,0.70)
+        (6,0.72) (7,0.74) (8,0.75) (9,0.76) (10,0.768)
+      };
+      \legend{Hybrid, Regelbasiert}
+    \end{axis}
+  \end{tikzpicture}
+\end{frame}
+
+\section{Werkzeug}
+
+\begin{frame}{LaTeX Studio auf einen Blick}
+  \begin{description}
+    \item[Live-Vorschau] PDF sofort nach dem Build, Zoom und Seitennavigation
+    \item[SyncTeX] Klick ins PDF springt in den Quelltext
+    \item[Autocomplete] Befehle, Umgebungen, Labels und Zitate
+    \item[Problemliste] Fehler und Warnungen mit Sprungziel
+    \item[Projektverwaltung] Umbenennen, Duplizieren, Export, ZIP-Import
+  \end{description}
+
+  \vspace{0.8em}
+  \centering\small Tastenkürzel: \texttt{Strg+B} bauen \quad
+  \texttt{Strg+P} Datei öffnen \quad \texttt{Strg+Umschalt+P} Befehlspalette
+\end{frame}
+
+\begin{frame}[fragile]{Code in Folien}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{lstlisting}[basicstyle=\ttfamily\tiny, frame=single,
+                          language=bash, numbers=none]
+latexmk -pdf -interaction=nonstopmode main.tex
+# oder direkt im Editor: Strg+B
+      \end{lstlisting}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{alertblock}{Achtung}
+        \texttt{shell-escape} nur für vertrauenswürdige Projekte
+        aktivieren.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Zusammenfassung}
+  \begin{itemize}
+    \item Ein Quelltext, viele Ausgaben -- Reproduzierbarkeit inklusive
+    \item Automatisierte Fehleranalyse spart Korrekturschleifen
+    \item SyncTeX schließt die Lücke zwischen PDF und Quelltext
+  \end{itemize}
+
+  \vspace{1.2em}
+  \centering
+  \Huge\color{accent} Vielen Dank für die Aufmerksamkeit!
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Literatur}
+  \begingroup
+  \small
+  \bibliographystyle{plain}
+  \bibliography{references}
+  \endgroup
+\end{frame}
+
+\end{document}

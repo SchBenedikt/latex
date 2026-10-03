@@ -1,0 +1,46 @@
+\documentclass[11pt,fromalign=right,fromphone=true,fromemail=true,parskip=half]{scrlttr2}
+
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+
+\setkomavar{fromname}{Max Mustermann}
+\setkomavar{fromaddress}{Musterstraße 1\\12345 Musterstadt}
+\setkomavar{fromphone}{+49~123~456789}
+\setkomavar{fromemail}{max@example.org}
+\setkomavar{signature}{Max Mustermann}
+\setkomavar{place}{Musterstadt}
+\setkomavar{date}{\today}
+
+\begin{document}
+
+\begin{letter}{%
+  Erika Musterfrau\\
+  Beispiel GmbH\\
+  Firmenweg 42\\
+  54321 Beispielstadt%
+}
+
+\KOMAoptions{addrfield=true}
+
+\opening{Sehr geehrte Frau Musterfrau,}
+
+mit diesem Brief senden wir Ihnen das Angebot gemäß unserem Gespräch vom
+\today. Die wichtigsten Konditionen haben wir nachstehend zusammengefasst:
+
+\begin{itemize}
+  \item Lieferzeit: 14~Tage ab Auftragseingang
+  \item Zahlungsziel: 30~Tage netto
+  \item Gültigkeit des Angebots: 30~Tage
+\end{itemize}
+
+Bei Rückfragen stehe ich Ihnen gerne zur Verfügung.
+
+\closing{Mit freundlichen Grüßen}
+
+\ps{Anlagen: Angebot, Datenblatt}
+
+\end{letter}
+\end{document}

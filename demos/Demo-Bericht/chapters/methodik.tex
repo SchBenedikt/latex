@@ -1,0 +1,63 @@
+\section{Methodik}
+\label{sec:methodik}
+
+\subsection{Werkzeugkette}
+\label{sec:toolchain}
+
+Die Kette besteht aus vier Stufen: Bearbeiten, Kompilieren, Auswerten und
+Veröffentlichen. Abbildung~\ref{fig:pipeline} stellt sie dar.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      >=Stealth,
+      stage/.style={draw, rounded corners=3pt, minimum width=26mm, minimum height=10mm,
+                    align=center, fill=blue!8},
+      link/.style={->, thick, black!65},
+    ]
+    \node[stage] (edit) {Bearbeiten};
+    \node[stage, right=14mm of edit] (build) {Kompilieren};
+    \node[stage, right=14mm of build] (check) {Auswerten};
+    \node[stage, right=14mm of check] (pub) {Veröffentlichen};
+    \draw[link] (edit) -- (build);
+    \draw[link] (build) -- (check);
+    \draw[link] (check) -- (pub);
+    \draw[link, red!70!black, dashed] (check.south) -- node[below=2mm, font=\small]
+      {Fehler} (build.south);
+  \end{tikzpicture}
+  \caption{Vierstufige Dokumentenpipeline mit Rückkopplung.}
+  \label{fig:pipeline}
+\end{figure}
+
+\begin{warnung}{Hinweis zu shell-escape}
+  Makros, die externe Programme starten, benötigen
+  \texttt{shell-escape}. Diese Option ist standardmäßig \emph{ausgeschaltet} und
+  kann in den Einstellungen von \emph{LaTeX Studio} aktiviert werden.
+\end{warnung}
+
+\subsection{Messdesign}
+
+Für jede Stufe wird die benötigte Zeit in Sekunden gemessen. Der Mittelwert
+berechnet sich als
+\[
+  \bar{t} \;=\; \frac{1}{n}\sum_{i=1}^{n} t_i,
+\]
+die Standardabweichung entsprechend nach der üblichen Formel. Die Stichprobe
+umfasst $n = \num{30}$ Läufe pro Stufe.
+
+\subsection{Datenfluss}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Eingangsdaten der Auswertung.}
+  \label{tab:inputs}
+  \begin{tabular}{l l r}
+    \toprule
+    Quelle & Inhalt & Umfang \\
+    \midrule
+    \texttt{main.log}     & Meldungen des Satzsystems & \SI{180}{\kibi\byte} \\
+    \texttt{main.aux}     & Labels und Verweise      & \SI{12}{\kibi\byte} \\
+    \texttt{references.bib} & Literaturreferenzen      & \SI{4}{\kibi\byte} \\
+    \bottomrule
+  \end{tabular}
+\end{table}

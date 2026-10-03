@@ -1,0 +1,97 @@
+\documentclass[11pt,reqno]{amsart}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=2.8cm}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newtheorem{theorem}{Satz}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Korollar}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Bemerkung}
+
+\numberwithin{equation}{section}
+
+\title{Ein Titel für den mathematischen Aufsatz}
+\author{Vorname Nachname}
+\address{Institut für Mathematik, Beispiel-Universität}
+\email{autor@example.org}
+\date{\today}
+
+\begin{document}
+
+\begin{abstract}
+  Hier steht die Zusammenfassung. Abstracts in \textsf{amsart} sind
+  standardmäßig gesetzt und werden automatisch nummeriert.
+\end{abstract}
+
+\maketitle
+
+\section{Einleitung}
+\label{sec:einleitung}
+
+Sei $X$ ein kompakter metrischer Raum. Wir bezeichnen mit
+$\mathcal{C}(X)$ die Algebra der stetigen Abbildungen $X \to \mathbb{R}$
+mit der Supremumsnorm.
+
+\section{Vorbereitungen}
+\label{sec:vorarbeit}
+
+\begin{definition}[Norm]
+  \label{def:norm}
+  Eine Abbildung $\|\cdot\| : V \to \mathbb{R}$ heißt \emph{Norm}, wenn für alle
+  $x,y \in V$ und $\lambda \in \mathbb{K}$ gilt:
+  \begin{enumerate}
+    \item $\|x\| \ge 0$ mit $\|x\| = 0 \Leftrightarrow x = 0$,
+    \item $\|\lambda x\| = |\lambda|\,\|x\|$,
+    \item $\|x + y\| \le \|x\| + \|y\|$.
+  \end{enumerate}
+\end{definition}
+
+\begin{theorem}[Banach-Fixpunktsatz]
+  \label{thm:banach}
+  Sei $(X,d)$ ein vollständiger metrischer Raum und $T : X \to X$ eine
+  Kontraktion mit Konstante $q \in [0,1)$. Dann besitzt $T$ genau einen
+  Fixpunkt $x^\ast$ und für jedes $x_0 \in X$ konvergiert die Folge
+  $(x_n)$ mit $x_{n+1} = T(x_n)$ gegen $x^\ast$ mit
+  \begin{equation}
+    \label{eq:konvergenz}
+    d(x_n, x^\ast) \le \frac{q^n}{1-q}\, d(x_1, x_0).
+  \end{equation}
+\end{theorem}
+
+\begin{proof}
+  Nach \cref{def:norm} genügt es, die Folge $(x_n)$ als Cauchy-Folge zu
+  zeigen. Wir schätzen für $m > n$:
+  \begin{align*}
+    d(x_n, x_m) &\le \sum_{k=n}^{m-1} d(x_k, x_{k+1})
+                 \le \sum_{k=n}^{m-1} q^k\, d(x_0, x_1) \\
+                &\le \frac{q^n}{1-q}\, d(x_0, x_1) \xrightarrow[n\to\infty]{} 0.
+  \end{align*}
+  Die Stetigkeit von $T$ liefert $T(x^\ast) = x^\ast$. \qed
+\end{proof}
+
+\begin{remark}
+  Die Abschätzung \cref{eq:konvergenz} ist schneidengenau~\cite{rudin1976}.
+\end{remark}
+
+\begin{corollary}
+  \label{cor:loesung}
+  Die Gleichung $x = T(x)$ besitzt in $\mathbb{R}^n$ eine eindeutige Lösung,
+  falls $\|DT(x)\|_\infty \le q < 1$ auf einer abgeschlossenen Kugel gilt.
+\end{corollary}
+
+\begin{thebibliography}{9}
+  \bibitem{rudin1976} W. Rudin, \emph{Principles of Mathematical Analysis},
+  3rd ed., McGraw-Hill, 1976.
+\end{thebibliography}
+
+\end{document}

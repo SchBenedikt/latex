@@ -1,0 +1,27 @@
+\section{Einleitung}
+\label{sec:intro}
+
+Technische Dokumentation entsteht heute in verteilten Teams, häufig aus
+mehreren Quelltexten, Bildern und Datenquellen. Dieses Demoprojekt zeigt, wie
+sich solche Bestandteile in einem einzigen \LaTeX-Projekt zusammenführen lässt
+und wie \emph{LaTeX Studio} dabei unterstützt~\cite{lamport1994}.
+
+\begin{hinweis}{Gliederungsprinzip}
+  Jedes Kapitel liegt in einer eigenen Datei unter \texttt{chapters/}. Die
+  Hauptdatei \texttt{main.tex} bindet sie per \texttt{\textbackslash input}
+  ein. Die Gliederungs-Outline links zeigt die Struktur in Echtzeit.
+\end{hinweis}
+
+\subsection{Ziele}
+\label{sec:ziele}
+\begin{enumerate}[leftmargin=*, label=\alph*)]
+  \item Reproduzierbare Build-Kette ohne manuelle Eingriffe.
+  \item Konsistente Verweise auf Abschnitte, Abbildungen und Tabellen.
+  \item Frühzeitige Fehlererkennung durch Auswertung des \LaTeX-Logs.
+\end{enumerate}
+
+\subsection{Leserleitfaden}
+Abschnitt~\ref{sec:methodik} beschreibt das Vorgehen,
+Abschnitt~\ref{sec:ergebnisse} wertet die Messungen aus,
+Abschnitt~\ref{sec:fazit} fasst die Ergebnisse zusammen. Eine ausführliche
+Diskussion der Ergebnisse findet sich in \cref{sec:diskussion}.

@@ -1,0 +1,35 @@
+\documentclass[11pt,a4paper,ngerman]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{setspace}
+\onehalfspacing
+
+\title{Projektbericht:\\ Ein mehrstufiges \LaTeX-Projekt}
+\author{Arbeitsgruppe Dokumentation}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\input{chapters/einleitung}
+\input{chapters/methodik}
+\input{chapters/ergebnisse}
+\input{chapters/fazit}
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

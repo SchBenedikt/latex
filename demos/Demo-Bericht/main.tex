@@ -1,0 +1,104 @@
+\documentclass[11pt,a4paper,ngerman]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{margin=2.6cm}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[most]{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  citecolor=green!40!black,
+  urlcolor=blue!60!black,
+  pdftitle={Projektbericht},
+}
+\usepackage{cleveref}
+
+\definecolor{warnbg}{RGB}{255,244,224}
+\definecolor{tipbg}{RGB}{232,245,233}
+\definecolor{codebg}{RGB}{245,245,245}
+
+\newtcolorbox{hinweis}[1]{%
+  enhanced, breakable, colback=tipbg, colframe=green!45!black,
+  title={#1}, fonttitle=\bfseries, attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=green!45!black, colframe=green!45!black},
+  arc=2pt,
+}
+\newtcolorbox{warnung}[1]{%
+  enhanced, breakable, colback=warnbg, colframe=orange!70!black,
+  title={#1}, fonttitle=\bfseries, attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=orange!70!black, colframe=orange!70!black},
+  arc=2pt,
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{black!25},
+  breaklines=true,
+  showstringspaces=false,
+  keywordstyle=\color{blue!60!black}\bfseries,
+  commentstyle=\color{green!40!black}\itshape,
+  numbers=left,
+  numberstyle=\tiny\color{black!45},
+  numbersep=8pt,
+  language=bash,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Projektbericht -- Demoprojekt}
+\fancyhead[R]{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{Automatisierte Dokumentenpipeline\\[0.4em]\large Ein mehrstufiges \LaTeX-Demoprojekt}
+\author{Arbeitsgruppe Dokumentation \\ \texttt{ag@example.org}}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+\newpage
+
+\input{chapters/einleitung}
+\input{chapters/methodik}
+\input{chapters/ergebnisse}
+\input{chapters/fazit}
+
+\appendix
+\section{Reproduktionsskript}
+\label{app:skript}
+Das vollständige Skript aus \cref{sec:toolchain} ist in
+\cref{lst:skript} wiedergegeben.
+
+\begin{lstlisting}[caption={Build-Skript des Demoprojekts}, label={lst:skript}]
+#!/usr/bin/env bash
+set -euo pipefail
+latexmk -pdf -interaction=nonstopmode main.tex
+echo "PDF erzeugt: $(ls -1 main.pdf)"
+\end{lstlisting}
+
+\clearpage
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
