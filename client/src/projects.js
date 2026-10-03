@@ -188,9 +188,9 @@ export async function deleteProject() {
   }
 }
 
-export function exportProject() {
+export async function exportProject() {
   if (!state.project) return;
-  location.href = api.exportUrl(state.project);
+  await api.exportProject(state.project);
 }
 
 /* --------------------------------------------------------- ZIP-Import */

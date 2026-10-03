@@ -71,15 +71,18 @@ async function boot() {
       const es = $('#engine-select');
       clear(es);
       for (const e of app.engines) es.append(el('option', { value: e.id, text: e.label }));
-      es.value = state.settings.engine;
+      es.value = app.engines.some((e) => e.id === state.settings.engine) ? state.settings.engine : app.engines[0].id;
+      if (es.value !== state.settings.engine) setSettings({ engine: es.value });
       es.addEventListener('change', () => setSettings({ engine: es.value }));
     }
 
-    if (!app.tools?.latexmk) {
+    if (app.browserWorkspace) {
+      toast('Browser workspace is ready. Files and PDF builds stay in this browser.', { type: 'ok', ms: 7000 });
+    } else if (!app.tools?.latexmk) {
       toast('latexmk was not found — compilation is unavailable.', { type: 'err', ms: 12000 });
     }
   } catch (e) {
-    toast('Server unavailable: ' + e.message, { type: 'err', ms: 15000 });
+    toast('Workspace unavailable: ' + e.message, { type: 'err', ms: 15000 });
     return;
   }
 
@@ -115,6 +118,7 @@ async function switchProject(name, { restoreTabs = false } = {}) {
   const savedTabs = restoreTabs ? [...state.tabs] : [];
   const savedActive = state.active;
   setProject(name);
+  if (api.isBrowserWorkspace()) state.pdf = null;
   // Projectspezifische Settings (.latexstudio.json) laden
   await loadScope(name);
   syncTopbar();
@@ -433,7 +437,7 @@ function wireEvents() {
   });
 
   on('pdf:refresh', (pdf) => {
-    if (pdf?.file) loadPdf(api.pdfUrl(state.project, pdf.file), { keepScroll: true });
+    if (pdf?.file) loadPdf(pdf.url || api.pdfUrl(state.project, pdf.file), { keepScroll: true });
   });
   on('pdf:empty', () => {
     document.getElementById('pdf-pages').innerHTML = '';

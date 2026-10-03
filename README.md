@@ -36,7 +36,11 @@ Open [http://localhost:4180](http://localhost:4180). The landing page links to t
 
 ### Cloudflare Pages
 
-For the static frontend, use the repository root as the project root, run `npm ci && npm run build`, and set `client` as the build output directory. The build creates the browser bundle and the PDF.js worker assets in that output directory. Pages can host the landing page and styled workspace shell, but it cannot run this app's Node.js API, local filesystem operations, or TeX subprocesses. Those require a separate Node.js host; the browser frontend currently expects the API on the same origin, so a cross-origin backend needs an API proxy or explicit API-origin configuration before the editor can work remotely.
+For Cloudflare Workers, run `npm ci && npm run deploy:cloudflare`. This builds the app, downloads the TeX Live 2025 WebAssembly runtime, splits its larger runtime files into Cloudflare-compatible static assets, then publishes the Worker and assets together. Runtime downloads total about 230 MB during deployment; visitors download the 31 MB compiler and only the package bundles their documents use. See [Cloudflare deployment](docs/CLOUDFLARE.md) for browser requirements, supported engines, and limits.
+
+The deployed editor automatically uses a browser-local workspace backed by IndexedDB. Users can create and edit projects, files, and folders, search and replace text, import/export ZIP archives, and keep work across reloads in the same browser profile. **PDF compilation also works on the hosted domain**: pdfLaTeX and XeLaTeX run in WebAssembly inside the visitor's browser. Project sources and generated PDFs stay in that browser; the Worker only serves static app/compiler assets and byte ranges. Browser-local files are separate from files on the computer's filesystem; export a project ZIP to download a copy.
+
+Use `npm start` for the full local Node.js workflow, including local TeX installations, LuaLaTeX, SyncTeX, system package diagnostics/installation, GitHub import, and Zotero/BibTeX merge tools.
 
 ## Documentation
 

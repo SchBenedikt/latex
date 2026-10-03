@@ -70,6 +70,43 @@ function handleMessage(msg) {
 
 export async function buildProject({ silent = false } = {}) {
   if (!state.project) { toast('No project selected', { type: 'warn' }); return; }
+  if (api.isBrowserWorkspace()) {
+    if (building) return;
+    const project = state.project;
+    building = true;
+    try {
+      if (!await saveAll() || anyDirty()) throw new Error('Some changes could not be saved. Please build again.');
+      if (state.project !== project) { building = false; return; }
+      clearConsole();
+      setBuildStatus('busy', 'Preparing browser TeX engine…');
+      if (!silent) showBottom('console');
+      appendConsole('[LaTeX Studio] Initializing TeX Live WebAssembly and compiling in this browser.\n');
+      const result = await api.build(project, { file: state.settings.mainFile, engine: state.settings.engine });
+      if (state.project !== project) { building = false; return; }
+      building = false;
+      appendConsole(result.log || (result.status === 'ok' ? '[TeX] PDF created.\n' : '[TeX] Compilation failed.\n'), result.status === 'ok' ? 'line-ok' : 'line-err');
+      state.issues = result.issues || [];
+      state.build = { status: result.status, engine: result.engine, duration: result.duration };
+      setBuildStatus(result.status === 'ok' ? 'ok' : 'err', result.status === 'ok' ? `PDF ready · ${fmtDuration(result.duration)}` : `Build failed · ${fmtDuration(result.duration)}`);
+      renderProblems();
+      if (result.pdf) {
+        state.pdf = result.pdf;
+        emit('pdf:refresh', result.pdf);
+        toast('PDF compiled in your browser', { type: 'ok' });
+      } else {
+        toast('LaTeX compilation failed. See the build log for details.', { type: 'err', ms: 7000 });
+      }
+      emit('build:end', result);
+      emit('tree:refresh');
+      return;
+    } catch (e) {
+      building = false;
+      setBuildStatus('err', 'Build failed');
+      appendConsole('\n[Browser TeX] ' + e.message + '\n', 'line-err');
+      toast('Could not compile in this browser: ' + e.message, { type: 'err', ms: 9000 });
+      return;
+    }
+  }
   if (building) return;
   building = true;
   const project = state.project;
@@ -142,6 +179,7 @@ async function onBuildEnd(msg) {
 
 export async function refreshMeta() {
   if (!state.project) return;
+  if (api.isBrowserWorkspace()) return;
   try {
     const meta = await api.meta(state.project, state.settings.mainFile);
     state.meta = { ...state.meta, ...meta };
@@ -308,7 +346,7 @@ async function loadRawLog() {
 }
 
 export function initBuild() {
-  connectWs();
+  if (!api.isBrowserWorkspace()) connectWs();
 
   $('#btn-build').addEventListener('click', () => buildProject());
   $('#btn-autobuild').addEventListener('click', () => {

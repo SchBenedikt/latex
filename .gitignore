@@ -1,6 +1,8 @@
 node_modules/
+.wrangler/
 client/dist/
 client/vendor/
+client/engine-data/
 projects/
 .trash/
 *.log

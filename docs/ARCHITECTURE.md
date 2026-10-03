@@ -1,6 +1,6 @@
 # Architecture
 
-LaTeX Studio is a local Node.js application. Express serves the landing page, workspace, static client assets, and JSON APIs. The browser client is plain JavaScript with CodeMirror 6 and pdf.js. `build.mjs` bundles the browser modules into `client/dist/`.
+LaTeX Studio has two storage/runtime modes. The local Node.js application uses Express APIs, the user's workspace filesystem, installed TeX engines, and pdf.js. On Cloudflare static hosting, the browser client detects the missing API and uses a per-browser IndexedDB workspace for project and file operations. PDF compilation uses TeX Live WebAssembly (pdfLaTeX or XeLaTeX) inside that browser; a Cloudflare Worker serves same-origin, range-readable static compiler assets. The browser does not send project sources to the Worker. LuaLaTeX, SyncTeX, local TeX package tools, GitHub import, and Zotero/BibTeX merging use the local Node.js server. ZIP export/import provides portable project transfer. The browser client is plain JavaScript with CodeMirror 6 and pdf.js. `build.mjs` bundles the browser modules, project templates, and PDF.js assets into `client/`.
 
 The server keeps projects below the configured `LATEX_ROOT` (default: the repository's `projects/` directory). Builds invoke the selected TeX engine in the project directory and expose build output and diagnostics to the workspace. Package inspection and installation use TeX Live or MiKTeX command-line tools when detected.
 

@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "description": "A local-first LaTeX workspace with live PDF preview, SyncTeX, package diagnostics, and project tools",
-  "repository": { "type": "git", "url": "https://github.com/schBenedikt/latex.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schBenedikt/latex.git"
+  },
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:cloudflare": "node build.mjs && node scripts/prepare-cloudflare-engine.mjs",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
     "verify": "node scripts/verify.mjs",
     "start": "node build.mjs && node server/index.js",
     "dev": "node build.mjs --watch & node server/index.js",
@@ -22,6 +27,7 @@
     "@codemirror/view": "^6.36.1",
     "@lezer/common": "^1.2.3",
     "@lezer/highlight": "^1.2.1",
+    "@siglum/engine": "0.1.4",
     "codemirror": "^6.0.1",
     "express": "^4.21.2",
     "jszip": "^3.10.1",

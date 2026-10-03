@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "latex",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-03",
+  "assets": {
+    "directory": "./client/",
+    "binding": "ASSETS",
+    "run_worker_first": ["/engine/*"]
+  }
+}

@@ -417,14 +417,14 @@ export function clearSearch() {
 export function openPdfInTab() {
   const pdf = state.pdf;
   if (!pdf) return;
-  window.open(api.pdfUrl(state.project, pdf.file), '_blank');
+  window.open(pdf.url || api.pdfUrl(state.project, pdf.file), '_blank');
 }
 
 export function downloadPdf() {
   const pdf = state.pdf;
   if (!pdf) return;
   const a = document.createElement('a');
-  a.href = api.pdfUrl(state.project, pdf.file);
+  a.href = pdf.url || api.pdfUrl(state.project, pdf.file);
   a.download = pdf.file;
   document.body.append(a);
   a.click();
