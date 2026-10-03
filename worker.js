@@ -35,7 +35,7 @@ export default {
         if (start > end || end >= fullSize) return new Response('Range not satisfiable', { status: 416, headers: { 'Content-Range': `bytes */${fullSize}` } });
         status = 206;
       }
-      const chunks = [];
+      const neededParts = [];
       let offset = 0;
       for (const part of parts) {
         const partStart = offset;
@@ -45,14 +45,7 @@ export default {
         const partUrl = new URL(`/engine-data/${assetPath}.part${String(part.index).padStart(3, '0')}`, url.origin);
         const from = Math.max(0, start - partStart);
         const to = Math.min(part.size, end - partStart + 1);
-        const partHeaders = new Headers();
-        if (status === 206) partHeaders.set('range', `bytes=${from}-${to - 1}`);
-        const response = await env.ASSETS.fetch(new Request(partUrl, { headers: partHeaders }));
-        if (!response.ok) return new Response('Compiler asset chunk could not be read', { status: 502 });
-        const data = new Uint8Array(await response.arrayBuffer());
-        // Static asset bindings honor Range. Keep a safe fallback for local/older
-        // runtimes that return a whole chunk despite the range request.
-        chunks.push(response.status === 206 ? data : data.subarray(from, to));
+        neededParts.push({ partUrl, from, to });
       }
       const responseHeaders = new Headers({
         'Accept-Ranges': 'bytes',
@@ -62,7 +55,70 @@ export default {
       });
       if (status === 206) responseHeaders.set('Content-Range', `bytes ${start}-${end}/${fullSize}`);
       responseHeaders.set('Cross-Origin-Resource-Policy', 'same-origin');
-      return new Response(request.method === 'HEAD' ? null : new Blob(chunks), { status, headers: responseHeaders });
+      if (request.method === 'HEAD') return new Response(null, { status, headers: responseHeaders });
+
+      // Stream each static chunk under backpressure instead of buffering large
+      // assets (up to ~60 MB) and copying them into a second whole-size Blob.
+      let nextPart = 0;
+      let reader = null;
+      let filterRange = false;
+      let rangeSkip = 0;
+      let rangeRemaining = 0;
+      const body = new ReadableStream({
+        async pull(controller) {
+          while (true) {
+            if (reader) {
+              const { done, value } = await reader.read();
+              if (done) {
+                reader.releaseLock();
+                reader = null;
+                filterRange = false;
+                continue;
+              }
+              if (filterRange) {
+                const skip = Math.min(rangeSkip, value.length);
+                rangeSkip -= skip;
+                const length = Math.min(value.length - skip, rangeRemaining);
+                const selected = value.subarray(skip, skip + length);
+                rangeRemaining -= length;
+                if (rangeRemaining === 0) {
+                  await reader.cancel();
+                  reader.releaseLock();
+                  reader = null;
+                  filterRange = false;
+                }
+                if (selected.length) {
+                  controller.enqueue(selected);
+                  return;
+                }
+                continue;
+              }
+              if (value) {
+                controller.enqueue(value);
+                return;
+              }
+            }
+            if (nextPart >= neededParts.length) {
+              controller.close();
+              return;
+            }
+            const { partUrl, from, to } = neededParts[nextPart++];
+            const partHeaders = new Headers();
+            if (status === 206) partHeaders.set('range', `bytes=${from}-${to - 1}`);
+            const partResponse = await env.ASSETS.fetch(new Request(partUrl, { headers: partHeaders }));
+            if (!partResponse.ok || !partResponse.body) throw new Error('Compiler asset chunk could not be read');
+            reader = partResponse.body.getReader();
+            // Older local runtimes may ignore Range and return the full chunk.
+            filterRange = status === 206 && partResponse.status !== 206;
+            rangeSkip = from;
+            rangeRemaining = to - from;
+          }
+        },
+        async cancel() {
+          if (reader) await reader.cancel();
+        },
+      });
+      return new Response(body, { status, headers: responseHeaders });
     }
     return isolated(await env.ASSETS.fetch(request));
   },
