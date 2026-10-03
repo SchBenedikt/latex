@@ -49,7 +49,7 @@ Hello from the verification document.
 
 try {
   await check('HTML and JavaScript assets', async () => {
-    for (const route of ['/', '/studio', '/client/dist/app.js', '/client/styles/workspace.css']) {
+    for (const route of ['/', '/studio', '/dist/app.js', '/styles/landing.css', '/styles/workspace.css', '/vendor/pdfjs/build/pdf.worker.min.mjs']) {
       const response = await fetch(base + route); assert.equal(response.status, 200);
       if (route === '/') assert.match(await response.text(), /Write with focus/);
       if (route === '/studio') assert.match(await response.text(), /id="app"/);

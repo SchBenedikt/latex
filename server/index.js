@@ -821,10 +821,14 @@ app.post('/api/search', wrap(async (req, res) => {
 
 /* ------------------------------------------------------------- Static */
 
-app.use('/vendor/pdfjs', express.static(path.join(APP_ROOT, 'node_modules', 'pdfjs-dist'), { fallthrough: true, maxAge: '1d' }));
+app.use('/vendor/pdfjs', express.static(path.join(CLIENT, 'vendor', 'pdfjs'), { fallthrough: true, maxAge: '1d' }));
 // Client assets are rebuilt in place; revalidate immediately so the browser
 // cannot keep an old editor bundle after an app update.
 app.use('/client', express.static(CLIENT, { etag: true, maxAge: 0 }));
+// These root-relative paths also match a Pages deployment with `client` as output directory.
+app.use('/styles', express.static(path.join(CLIENT, 'styles'), { etag: true, maxAge: 0 }));
+app.use('/dist', express.static(path.join(CLIENT, 'dist'), { etag: true, maxAge: 0 }));
+app.use('/vendor', express.static(path.join(CLIENT, 'vendor'), { etag: true, maxAge: '1d' }));
 app.use('/docs', express.static(path.join(APP_ROOT, 'docs'), { etag: true, maxAge: 0 }));
 app.get('/favicon.svg', (req, res) => res.sendFile(path.join(CLIENT, 'favicon.svg')));
 app.get('/studio', (req, res) => res.sendFile(path.join(CLIENT, 'studio.html')));

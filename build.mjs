@@ -1,5 +1,5 @@
 import esbuild from 'esbuild';
-import { mkdirSync } from 'node:fs';
+import { cpSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,5 +29,11 @@ if (watch) {
   console.log('[build] watching…');
 } else {
   await esbuild.build(options);
+  const pdfjs = path.join(root, 'node_modules', 'pdfjs-dist');
+  const publicPdfjs = path.join(root, 'client', 'vendor', 'pdfjs');
+  mkdirSync(path.join(publicPdfjs, 'build'), { recursive: true });
+  cpSync(path.join(pdfjs, 'build', 'pdf.worker.min.mjs'), path.join(publicPdfjs, 'build', 'pdf.worker.min.mjs'));
+  cpSync(path.join(pdfjs, 'cmaps'), path.join(publicPdfjs, 'cmaps'), { recursive: true });
+  cpSync(path.join(pdfjs, 'standard_fonts'), path.join(publicPdfjs, 'standard_fonts'), { recursive: true });
   console.log('[build] client bundle written to client/dist/app.js');
 }

@@ -4,6 +4,9 @@ A local-first LaTeX workspace for writing, compiling, and reviewing documents in
 
 LaTeX Studio combines a CodeMirror editor, live PDF preview, SyncTeX navigation, project-wide search, build diagnostics, project templates, and package checks. It runs on your machine and stores projects in its local `projects/` directory.
 
+![LaTeX Studio landing page and workspace preview](screenshots/landing-page.jpg)
+
+
 ## Features
 
 - Source, split, and PDF-focused workspace layouts
@@ -30,6 +33,10 @@ npm start
 ```
 
 Open [http://localhost:4180](http://localhost:4180). The landing page links to the workspace at `/studio`. By default the server listens on `0.0.0.0:4180`; set `HOST=127.0.0.1` to limit access to the local machine, or set `PORT` to use another port.
+
+### Cloudflare Pages
+
+For the static frontend, use the repository root as the project root, run `npm ci && npm run build`, and set `client` as the build output directory. The build creates the browser bundle and the PDF.js worker assets in that output directory. Pages can host the landing page and styled workspace shell, but it cannot run this app's Node.js API, local filesystem operations, or TeX subprocesses. Those require a separate Node.js host; the browser frontend currently expects the API on the same origin, so a cross-origin backend needs an API proxy or explicit API-origin configuration before the editor can work remotely.
 
 ## Documentation
 
