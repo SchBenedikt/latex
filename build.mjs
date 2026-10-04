@@ -53,7 +53,12 @@ if (watch) {
   console.log('[build] watching…');
 } else {
   await esbuild.build(options);
-  cpSync(path.join(root, 'node_modules', '@siglum', 'engine', 'src', 'worker.js'), path.join(root, 'client', 'dist', 'siglum-worker.js'));
+  const siglumWorker = readFileSync(path.join(root, 'node_modules', '@siglum', 'engine', 'src', 'worker.js'), 'utf8');
+  const packageLookup = 'function getPackageFromFile(filename) {\n    const fontPkg = getFontPackage(filename);';
+  if (!siglumWorker.includes(packageLookup)) throw new Error('The installed Siglum worker package lookup changed; update the browser package resolver patch.');
+  const patchedWorker = siglumWorker.replace(packageLookup, `function getPackageFromFile(filename) {\n    // babel-german is not part of the upstream base bundles.\n    if (/^(ngerman|german|germanb)\\.ldf$/i.test(filename)) return 'babel-german';\n    const fontPkg = getFontPackage(filename);`);
+  writeFileSync(path.join(root, 'client', 'dist', 'siglum-worker.js'), patchedWorker);
+  cpSync(path.join(root, 'node_modules', 'xzwasm', 'dist', 'package', 'xzwasm.js'), path.join(root, 'client', 'dist', 'xzwasm.js'));
   writeFileSync(path.join(root, 'client', 'templates.json'), JSON.stringify(collectTemplates()));
   const pdfjs = path.join(root, 'node_modules', 'pdfjs-dist');
   const publicPdfjs = path.join(root, 'client', 'vendor', 'pdfjs');

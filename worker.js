@@ -9,6 +9,24 @@ function isolated(response) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const texLivePrefix = '/api/texlive/';
+    if (url.pathname.startsWith(texLivePrefix)) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
+      const packageName = decodeURIComponent(url.pathname.slice(texLivePrefix.length));
+      if (!/^[a-z0-9][a-z0-9_.+-]{0,100}$/i.test(packageName)) return new Response('Invalid TeX Live package name', { status: 400 });
+      const packageUrl = `https://mirrors.ctan.org/systems/texlive/tlnet/archive/${packageName}.tar.xz`;
+      try {
+        const upstream = await fetch(packageUrl, { method: request.method, redirect: 'follow', cf: { cacheEverything: true, cacheTtl: 86400 } });
+        if (!upstream.ok) return new Response('TeX Live package not found', { status: upstream.status === 404 ? 404 : 502 });
+        const headers = new Headers(upstream.headers);
+        headers.set('Content-Type', 'application/x-xz');
+        headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+        headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+        return new Response(upstream.body, { status: upstream.status, headers });
+      } catch {
+        return new Response('TeX Live package service is temporarily unavailable', { status: 502 });
+      }
+    }
     if (url.pathname.startsWith('/engine/')) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405 });
       const assetPath = url.pathname.slice('/engine/'.length);

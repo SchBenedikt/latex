@@ -109,10 +109,12 @@ async function compiler() {
       wasmUrl: '/engine/tl2025/busytex.wasm',
       jsUrl: '/engine/tl2025/busytex.js',
       workerUrl: '/dist/siglum-worker.js',
-      enableCtan: false,
+      ctanProxyUrl: '/api',
+      xzwasmUrl: '/dist/xzwasm.js',
+      enableCtan: true,
       enableLazyFS: true,
       enableDocCache: true,
-      verbose: false,
+      verbose: true,
       onLog: (message) => { compilerLogs.push(String(message)); if (compilerLogs.length > 400) compilerLogs.shift(); },
       onProgress: (stage, detail) => { if (compilerLogs.length < 400) compilerLogs.push(`[${stage}] ${detail}`); },
     });
@@ -287,7 +289,11 @@ export const browserWorkspace = {
       if (!result.success || !result.pdf?.length) {
         return { status: 'failed', engine, duration, code: result.exitCode || 1, issues: [], log: [result.log || result.error || 'The TeX compiler did not produce a PDF.', ...compilerLogs].filter(Boolean).join('\n') };
       }
-      const url = URL.createObjectURL(new Blob([result.pdf], { type: 'application/pdf' }));
+      // Siglum can return PDF bytes backed by SharedArrayBuffer. Blob rejects
+      // shared views, so make an ordinary ArrayBuffer before creating the URL.
+      const pdfBytes = new Uint8Array(result.pdf.byteLength);
+      pdfBytes.set(result.pdf);
+      const url = URL.createObjectURL(new Blob([pdfBytes.buffer], { type: 'application/pdf' }));
       return { status: 'ok', engine, duration, issues: [], log: [result.log, ...compilerLogs].filter(Boolean).join('\n'), cached: !!result.cached, pdf: { file: `${main.replace(/\.tex$/i, '')}.pdf`, url } };
     } catch (error) {
       if (compilerLogs.some((line) => line.includes('Cloudflare Error 1027'))) {
