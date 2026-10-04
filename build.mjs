@@ -54,15 +54,18 @@ const options = {
         if (sourcePath.endsWith(`${path.sep}ctan.js`)) {
           const supportedFiles = "const texExtensions = ['.sty', '.cls', '.def', '.cfg', '.tex', '.fd', '.clo', '.ltx'];";
           if (!source.includes(supportedFiles)) throw new Error('Siglum CTAN file filter changed; update the Babel language definition patch.');
+          const packageStatus = 'this.onLog(`[TEXLIVE] Response status: ${response?.status}`);';
+          if (!source.includes(packageStatus)) throw new Error('Siglum TeX Live fetch flow changed; review transient error handling.');
+          const transientStatus = `${packageStatus}\n            if (response && (response.status === 429 || response.status >= 500)) {\n                this.onLog('[TEXLIVE] Temporary package service error (' + response.status + '); not caching as missing.');\n                return null;\n            }`;
           return {
-            contents: source.replace(supportedFiles, "const texExtensions = ['.sty', '.cls', '.def', '.ldf', '.cfg', '.tex', '.fd', '.clo', '.ltx'];"),
+            contents: source.replace(supportedFiles, "const texExtensions = ['.sty', '.cls', '.def', '.ldf', '.cfg', '.tex', '.fd', '.clo', '.ltx'];").replace(packageStatus, transientStatus),
             loader: 'js',
           };
         }
         const oldCacheVersion = 'const CTAN_CACHE_VERSION = 9;';
         if (!source.includes(oldCacheVersion)) throw new Error('Siglum CTAN cache version changed; review package cache invalidation.');
         return {
-          contents: source.replace(oldCacheVersion, 'const CTAN_CACHE_VERSION = 10;'),
+          contents: source.replace(oldCacheVersion, 'const CTAN_CACHE_VERSION = 11;'),
           loader: 'js',
         };
       });

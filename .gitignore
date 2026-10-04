@@ -3,6 +3,7 @@ node_modules/
 client/dist/
 client/vendor/
 client/engine-data/
+client/engine-static/
 projects/
 .trash/
 *.log

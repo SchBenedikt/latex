@@ -104,10 +104,33 @@ async function entriesUnder(project, path) {
 }
 async function compiler() {
   if (!compilerPromise) {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (...args) => {
+      const input = args[0];
+      const requestUrl = String(input?.url || input);
+      let response = await originalFetch(...args);
+      // Large optional bundles stay behind the Worker proxy. The normal
+      // compiler runtime and manifests are served directly as static assets.
+      if (requestUrl.includes('/engine-static/') && response.status === 404) {
+        const fallbackUrl = requestUrl.replace('/engine-static/', '/engine/');
+        const fallback = input instanceof Request
+          ? new Request(fallbackUrl, input)
+          : fallbackUrl;
+        response = await originalFetch(fallback, input instanceof Request ? undefined : args[1]);
+      }
+      if (requestUrl.includes('/engine') || requestUrl.includes('/api/texlive/')) {
+        compilerLogs.push(`[HTTP ${response.status}] ${requestUrl} · ${response.headers.get('content-type') || 'unknown type'}`);
+        if (response.status === 429) {
+          const body = await response.clone().text().catch(() => '');
+          if (/error\s*1027|workers? free plan/i.test(body)) compilerLogs.push('[Cloudflare Error 1027] A Worker request was rate limited; static compiler assets remain available.');
+        }
+      }
+      return response;
+    };
     const instance = new SiglumCompiler({
-      bundlesUrl: '/engine/tl2025/bundles',
-      wasmUrl: '/engine/tl2025/busytex.wasm',
-      jsUrl: '/engine/tl2025/busytex.js',
+      bundlesUrl: '/engine-static/tl2025/bundles',
+      wasmUrl: '/engine-static/tl2025/busytex.wasm',
+      jsUrl: '/engine-static/tl2025/busytex.js',
       workerUrl: '/dist/siglum-worker.js',
       // Siglum appends /api/texlive/<package> to this origin itself.
       ctanProxyUrl: location.origin,
@@ -119,17 +142,6 @@ async function compiler() {
       onLog: (message) => { compilerLogs.push(String(message)); if (compilerLogs.length > 400) compilerLogs.shift(); },
       onProgress: (stage, detail) => { if (compilerLogs.length < 400) compilerLogs.push(`[${stage}] ${detail}`); },
     });
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (...args) => {
-      const response = await originalFetch(...args);
-      const requestUrl = String(args[0]?.url || args[0]);
-      if (requestUrl.includes('/engine/')) compilerLogs.push(`[HTTP ${response.status}] ${requestUrl} · ${response.headers.get('content-type') || 'unknown type'}`);
-      if (requestUrl.includes('/engine/') && response.status === 429) {
-        const body = await response.clone().text().catch(() => '');
-        if (/error\s*1027|workers? free plan/i.test(body)) compilerLogs.push('[Cloudflare Error 1027] The account has reached its daily Worker request limit.');
-      }
-      return response;
-    };
     compilerPromise = instance.init().then(() => instance).catch((error) => { compilerPromise = null; throw error; }).finally(() => { globalThis.fetch = originalFetch; });
   }
   return compilerPromise;
@@ -288,12 +300,30 @@ export const browserWorkspace = {
       // TeX Live's compact base bundle contains babel.sty but omits regional
       // language definition files. Babel fails before Siglum's normal missing-
       // file retry can request them, so preload the German collection explicitly.
-      if (/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbabel\b[^}]*\}/i.test(source) && /\b(?:ngerman|german|naustrian|austrian|swissgerman)\b/i.test(source)) {
-        compilerLogs.push('[PACKAGE] Loading Babel language support: babel-german');
-        const german = await instance.ctanFetcher.fetchPackage('babel-german');
-        if (!german) compilerLogs.push('[PACKAGE] Could not load babel-german from the TeX Live package service.');
-      }
-      const result = await instance.compile(source, { engine, additionalFiles, useCache: true });
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async (...args) => {
+        const input = args[0];
+        const requestUrl = String(input?.url || input);
+        let response = await originalFetch(...args);
+        if (requestUrl.includes('/engine-static/') && response.status === 404) {
+          const fallbackUrl = requestUrl.replace('/engine-static/', '/engine/');
+          response = await originalFetch(input instanceof Request ? new Request(fallbackUrl, input) : fallbackUrl, input instanceof Request ? undefined : args[1]);
+        }
+        if ((requestUrl.includes('/engine') || requestUrl.includes('/api/texlive/')) && response.status === 429) {
+          const body = await response.clone().text().catch(() => '');
+          if (/error\s*1027|workers? free plan/i.test(body)) compilerLogs.push('[Cloudflare Error 1027] A Worker request was rate limited; static compiler assets remain available.');
+        }
+        return response;
+      };
+      let result;
+      try {
+        if (/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbabel\b[^}]*\}/i.test(source) && /\b(?:ngerman|german|naustrian|austrian|swissgerman)\b/i.test(source)) {
+          compilerLogs.push('[PACKAGE] Loading Babel language support: babel-german');
+          const german = await instance.ctanFetcher.fetchPackage('babel-german');
+          if (!german) compilerLogs.push('[PACKAGE] Could not load babel-german from the static package cache or TeX Live service.');
+        }
+        result = await instance.compile(source, { engine, additionalFiles, useCache: true });
+      } finally { globalThis.fetch = originalFetch; }
       const duration = Math.round(performance.now() - started);
       if (!result.success || !result.pdf?.length) {
         return { status: 'failed', engine, duration, code: result.exitCode || 1, issues: [], log: [result.log || result.error || 'The TeX compiler did not produce a PDF.', ...compilerLogs].filter(Boolean).join('\n') };
@@ -306,7 +336,7 @@ export const browserWorkspace = {
       return { status: 'ok', engine, duration, issues: [], log: [result.log, ...compilerLogs].filter(Boolean).join('\n'), cached: !!result.cached, pdf: { file: `${main.replace(/\.tex$/i, '')}.pdf`, url } };
     } catch (error) {
       if (compilerLogs.some((line) => line.includes('Cloudflare Error 1027'))) {
-        throw new Error('Cloudflare has reached its daily Worker request limit, so the browser compiler cannot load right now. Your browser-local project and files remain available.');
+        throw new Error('Cloudflare’s daily Worker request limit blocked an uncached large compiler asset or package. The compiler base and common packages are served as static files; retry this document after the limit resets. Your browser-local project and files remain available.');
       }
       throw new Error(`${error.message}${compilerLogs.length ? `\n${compilerLogs.join('\n')}` : ''}`);
     }
