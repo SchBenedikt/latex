@@ -71,11 +71,15 @@ function parseBibFile(input) {
 function makeBibItem(entry) {
   const f = entry.fields;
   const get = (...keys) => keys.map((key) => f[key]).find(Boolean) || '';
+  const texText = (value) => String(value || '').replace(/\u00a0/g, ' ')
+    .replace(/[«“]/g, '``').replace(/[»”]/g, "''")
+    .replace(/‘/g, '`').replace(/’/g, "'")
+    .replace(/–/g, '--').replace(/—/g, '---').replace(/…/g, '\\ldots{}');
   const parts = [];
   const author = get('author', 'editor');
-  if (author) parts.push(author.replace(/\s+and\s+/gi, ', '));
-  if (get('title')) parts.push(`\\emph{${get('title')}}`);
-  if (get('journal', 'booktitle', 'publisher', 'school', 'institution')) parts.push(`\\emph{${get('journal', 'booktitle', 'publisher', 'school', 'institution')}}`);
+  if (author) parts.push(texText(author).replace(/\s+and\s+/gi, ', '));
+  if (get('title')) parts.push(`\\emph{${texText(get('title'))}}`);
+  if (get('journal', 'booktitle', 'publisher', 'school', 'institution')) parts.push(`\\emph{${texText(get('journal', 'booktitle', 'publisher', 'school', 'institution'))}}`);
   const details = [get('volume') && `vol. ${get('volume')}`, get('number') && `no. ${get('number')}`, get('pages') && `pp. ${get('pages')}`].filter(Boolean).join(', ');
   if (details) parts.push(details);
   if (get('year', 'date')) parts.push(get('year', 'date'));

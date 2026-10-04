@@ -154,9 +154,43 @@ function displayCreators(item) {
 }
 
 function citationKey(item) {
+  if (item?._latexStudioCitationKey) return item._latexStudioCitationKey;
   const fromData = item?.data?.citationKey?.trim();
   if (fromData) return fromData;
-  return item?.bibtex?.match(/@\w+\s*\{\s*([^,\s]+)/)?.[1] || '';
+  return item?.bibtex?.match(/@[\w-]+\s*[({]\s*([^,\s]+)/)?.[1] || '';
+}
+
+function bibEntryForKey(source, key) {
+  const text = String(source || '');
+  const pattern = /@([\w-]+)\s*([({])\s*([^,\s]+)\s*,/g;
+  let match;
+  while ((match = pattern.exec(text))) {
+    const opener = match[2], closer = opener === '{' ? '}' : ')';
+    let depth = 1, quoted = false, escaped = false, end = match.index + match[0].length;
+    for (; end < text.length && depth; end++) {
+      const ch = text[end];
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\') { escaped = true; continue; }
+      if (ch === '"') quoted = !quoted;
+      if (!quoted && ch === opener) depth++;
+      else if (!quoted && ch === closer) depth--;
+    }
+    if (match[3].toLocaleLowerCase() === key.toLocaleLowerCase()) return text.slice(match.index, end);
+    pattern.lastIndex = end;
+  }
+  return '';
+}
+
+function bibEntryMatchesSource(entry, item) {
+  const normalize = (value) => String(value || '').replace(/\\[a-zA-Z]+(?:\s*\{[^{}]*\})?/g, ' ').replace(/[{}]/g, ' ').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const title = normalize(item?.data?.title);
+  const doi = normalize(item?.data?.DOI);
+  const candidate = normalize(entry);
+  return (title && candidate.includes(title)) || (doi && candidate.includes(doi));
+}
+
+function rewriteBibtexKey(item, key) {
+  return String(item?.bibtex || '').replace(/^(\s*@[\w-]+\s*[({]\s*)[^,\s]+/, `$1${key}`);
 }
 
 function filteredItems() {
@@ -387,21 +421,45 @@ async function addBibtexToProject(item) {
   const openDoc = state.docs.get(path);
   if (openDoc && !openDoc.saved) { toast(`Save ${target} before adding a Zotero entry.`, { type: 'warn', ms: 6000 }); return null; }
   const existing = files.includes(target) ? (await api.file(path)).content : '';
-  const key = citationKey(item);
-  if (!key) { toast('Zotero did not provide a BibTeX citation key for this source.', { type: 'err' }); return null; }
+  const baseKey = citationKey(item);
+  if (!baseKey) { toast('Zotero did not provide a BibTeX citation key for this source.', { type: 'err' }); return null; }
   const existingKeys = new Set([...String(existing).matchAll(/@[\w-]+\s*[\{(]\s*([^,\s]+)/g)].map((match) => match[1].toLocaleLowerCase()));
-  if (existingKeys.has(key.toLocaleLowerCase())) return { target, key, added: false };
-  const next = `${String(existing).trimEnd()}${String(existing).trim() ? '\n\n' : ''}${item.bibtex.trim()}\n`;
+  let key = baseKey;
+  let collision = false;
+  if (existingKeys.has(key.toLocaleLowerCase())) {
+    const previous = bibEntryForKey(existing, key);
+    if (bibEntryMatchesSource(previous, item)) {
+      item._latexStudioCitationKey = key;
+      return { target, key, added: false };
+    }
+    collision = true;
+    const suffix = String(item.key || 'zotero').toLocaleLowerCase();
+    key = `${baseKey}_${suffix}`;
+    let number = 2;
+    while (existingKeys.has(key.toLocaleLowerCase())) {
+      const scoped = bibEntryForKey(existing, key);
+      if (bibEntryMatchesSource(scoped, item)) {
+        item._latexStudioCitationKey = key;
+        return { target, key, added: false, collision };
+      }
+      key = `${baseKey}_${suffix}_${number++}`;
+    }
+  }
+  const sourceKey = String(item.bibtex || '').match(/@[\w-]+\s*[({]\s*([^,\s]+)/)?.[1];
+  const bibtex = sourceKey?.toLocaleLowerCase() === key.toLocaleLowerCase() ? String(item.bibtex) : rewriteBibtexKey(item, key);
+  if (!sourceKey || (sourceKey.toLocaleLowerCase() !== key.toLocaleLowerCase() && bibtex === String(item.bibtex || ''))) { toast('Could not safely update the Zotero BibTeX key.', { type: 'err' }); return null; }
+  item._latexStudioCitationKey = key;
+  const next = `${String(existing).trimEnd()}${String(existing).trim() ? '\n\n' : ''}${bibtex.trim()}\n`;
   await api.saveFile(path, next);
   await reloadFile(path);
   emit('tree:refresh'); emit('meta:refresh');
-  return { target, key, added: true };
+  return { target, key, added: true, collision };
 }
 
 async function addToBibliography() {
   const result = await addBibtexToProject(selectedItem);
   if (!result) return;
-  toast(result.added ? `Added ${result.key} to ${result.target}.` : `Citation key “${result.key}” is already in ${result.target}; nothing was overwritten.`, { type: result.added ? 'ok' : 'warn', ms: 5000 });
+  toast(result.collision ? `The original Zotero key was already used; added this source with unique key “${result.key}” in ${result.target}.` : result.added ? `Added ${result.key} to ${result.target}.` : `Citation key “${result.key}” is already in ${result.target}; nothing was overwritten.`, { type: result.collision ? 'warn' : result.added ? 'ok' : 'warn', ms: 6000 });
 }
 
 async function ensureMainBibliography(target, citationCommand = 'cite') {
@@ -463,11 +521,12 @@ async function ensureMainBibliography(target, citationCommand = 'cite') {
 
 async function insertCitation() {
   const item = selectedItem;
-  const key = citationKey(item);
+  let key = citationKey(item);
   if (!key) { toast('This source has no citation key.', { type: 'err' }); return; }
   if (!/\.tex$/i.test(currentPath() || '')) { toast('Open a .tex document before inserting a citation.', { type: 'warn' }); return; }
   const bibliography = await addBibtexToProject(item);
   if (!bibliography) return;
+  key = bibliography.key;
   closeModal(null);
   let command = $('#zotero-citation-command')?.value || 'cite';
   const mainPath = `${state.project}/${state.settings.mainFile || 'main.tex'}`;
@@ -477,7 +536,8 @@ async function insertCitation() {
   if (usesBiblatex && command === 'citet') command = 'textcite';
   insertText(`\\${command}{${key}}`);
   const configured = await ensureMainBibliography(bibliography.target, command);
-  toast(`Inserted citation and ${bibliography.added ? 'added its BibTeX entry' : 'confirmed its BibTeX entry'} in ${bibliography.target}.${configured === false ? ` Save ${state.settings.mainFile} and add a bibliography command before building.` : ' Build the project to update the PDF.'}`, { type: configured === false ? 'warn' : 'ok', ms: 7000 });
+  const keyNotice = bibliography.collision ? ` Zotero's original key was already used, so the source now uses ${key}.` : '';
+  toast(`Inserted citation and ${bibliography.added ? 'added its BibTeX entry' : 'confirmed its BibTeX entry'} in ${bibliography.target}.${keyNotice}${configured === false ? ` Save ${state.settings.mainFile} and add a bibliography command before building.` : ' Build the project to update the PDF.'}`, { type: configured === false || bibliography.collision ? 'warn' : 'ok', ms: 7000 });
 }
 
 async function copyBibtex() {
