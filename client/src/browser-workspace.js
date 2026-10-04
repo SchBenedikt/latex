@@ -52,7 +52,7 @@ function parseBibFile(input) {
           if (esc) { esc = false; continue; }
           if (c === '\\') { esc = true; continue; }
           if (ch === '{' && c === '{') level++;
-          else if (ch === '}' && ch === '{' && --level === 0) break;
+          else if (c === '}' && ch === '{' && --level === 0) break;
           else if (q && c === '"') break;
         }
         fields[m[1].toLowerCase()] = tail.slice(begin, i).trim();
