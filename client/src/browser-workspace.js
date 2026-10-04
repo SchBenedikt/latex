@@ -109,12 +109,13 @@ async function compiler() {
       wasmUrl: '/engine/tl2025/busytex.wasm',
       jsUrl: '/engine/tl2025/busytex.js',
       workerUrl: '/dist/siglum-worker.js',
-      ctanProxyUrl: '/api',
+      // Siglum appends /api/texlive/<package> to this origin itself.
+      ctanProxyUrl: location.origin,
       xzwasmUrl: '/dist/xzwasm.js',
       enableCtan: true,
       enableLazyFS: true,
       enableDocCache: true,
-      verbose: true,
+      verbose: false,
       onLog: (message) => { compilerLogs.push(String(message)); if (compilerLogs.length > 400) compilerLogs.shift(); },
       onProgress: (stage, detail) => { if (compilerLogs.length < 400) compilerLogs.push(`[${stage}] ${detail}`); },
     });
@@ -284,6 +285,14 @@ export const browserWorkspace = {
       const instance = await compiler();
       const source = decode(mainEntry.content);
       const started = performance.now();
+      // TeX Live's compact base bundle contains babel.sty but omits regional
+      // language definition files. Babel fails before Siglum's normal missing-
+      // file retry can request them, so preload the German collection explicitly.
+      if (/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbabel\b[^}]*\}/i.test(source) && /\b(?:ngerman|german|naustrian|austrian|swissgerman)\b/i.test(source)) {
+        compilerLogs.push('[PACKAGE] Loading Babel language support: babel-german');
+        const german = await instance.ctanFetcher.fetchPackage('babel-german');
+        if (!german) compilerLogs.push('[PACKAGE] Could not load babel-german from the TeX Live package service.');
+      }
       const result = await instance.compile(source, { engine, additionalFiles, useCache: true });
       const duration = Math.round(performance.now() - started);
       if (!result.success || !result.pdf?.length) {

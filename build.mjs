@@ -45,6 +45,29 @@ const options = {
   loader: { '.css': 'css', '.woff2': 'file', '.svg': 'file' },
   define: { 'process.env.NODE_ENV': watch ? '"development"' : '"production"' },
   alias: { 'blake3-wasm/browser.js': path.join(root, 'client', 'src', 'blake3-shim.js') },
+  plugins: [{
+    name: 'siglum-babel-language-definitions',
+    setup(build) {
+      build.onLoad({ filter: /(ctan|storage)\.js$/ }, ({ path: sourcePath }) => {
+        if (!sourcePath.includes(`${path.sep}@siglum${path.sep}engine${path.sep}`)) return null;
+        const source = readFileSync(sourcePath, 'utf8');
+        if (sourcePath.endsWith(`${path.sep}ctan.js`)) {
+          const supportedFiles = "const texExtensions = ['.sty', '.cls', '.def', '.cfg', '.tex', '.fd', '.clo', '.ltx'];";
+          if (!source.includes(supportedFiles)) throw new Error('Siglum CTAN file filter changed; update the Babel language definition patch.');
+          return {
+            contents: source.replace(supportedFiles, "const texExtensions = ['.sty', '.cls', '.def', '.ldf', '.cfg', '.tex', '.fd', '.clo', '.ltx'];"),
+            loader: 'js',
+          };
+        }
+        const oldCacheVersion = 'const CTAN_CACHE_VERSION = 9;';
+        if (!source.includes(oldCacheVersion)) throw new Error('Siglum CTAN cache version changed; review package cache invalidation.');
+        return {
+          contents: source.replace(oldCacheVersion, 'const CTAN_CACHE_VERSION = 10;'),
+          loader: 'js',
+        };
+      });
+    },
+  }],
 };
 
 if (watch) {
