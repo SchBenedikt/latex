@@ -11,7 +11,7 @@ npm ci
 npm run deploy:cloudflare
 ```
 
-The deployment command builds the app, downloads the compiler assets from the Siglum TeX Live 2025 distribution, splits files larger than Cloudflare's static asset limit into 20 MiB parts, and deploys those parts with the Worker. The full deployment payload is about 225 MiB. The generated `client/engine-data/` directory is ignored by Git. A fresh deployment download is required after cleaning it.
+The regular `npm run build` command builds the app and prepares the compiler assets from the Siglum TeX Live 2025 distribution before deployment. This matters for Cloudflare Workers Builds too: its default `npm run build` must include the ignored runtime files or the Worker will return `503 Compiler runtime manifest not found`. The build splits files larger than Cloudflare's static asset limit into 20 MiB parts and reuses a complete local payload when available. A clean CI checkout downloads the runtime (about 225 MiB) before Wrangler snapshots the assets. The generated `client/engine-data/` directory remains ignored by Git.
 
 The Worker only runs for `/engine/*` requests. Other assets are served directly by Cloudflare. Static headers enable cross-origin isolation, which the WebAssembly compiler uses for efficient shared memory. The Worker reassembles whole or byte-range requests from same-origin static parts.
 

@@ -9,9 +9,10 @@
   },
   "type": "module",
   "scripts": {
-    "build": "node build.mjs",
-    "build:cloudflare": "node build.mjs && node scripts/prepare-cloudflare-engine.mjs",
-    "deploy:cloudflare": "npm run build:cloudflare && wrangler deploy",
+    "build": "npm run build:app && node scripts/prepare-cloudflare-engine.mjs",
+    "build:app": "node build.mjs",
+    "build:cloudflare": "npm run build",
+    "deploy:cloudflare": "npm run build && wrangler deploy",
     "verify": "node scripts/verify.mjs",
     "start": "node build.mjs && node server/index.js",
     "dev": "node build.mjs --watch & node server/index.js",

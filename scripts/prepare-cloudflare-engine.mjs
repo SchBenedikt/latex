@@ -9,8 +9,6 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'client', 'engine-data', 'tl2025');
-const temporary = await mkdtemp(path.join(tmpdir(), 'latex-studio-engine-'));
-const archive = path.join(temporary, 'bundles.tar.gz');
 const chunkSize = 20 * 1024 * 1024;
 
 async function download(url, destination) {
@@ -41,7 +39,28 @@ async function writeChunks(source, relative) {
   return { asset: relative, size: (await stat(source)).size, chunks: chunkIndex + (pending.length || chunkIndex === 0 ? 1 : 0) };
 }
 
+let reusable = false;
 try {
+  const manifest = JSON.parse(await (await import('node:fs/promises')).readFile(path.join(root, 'client', 'engine-data', 'manifest.json'), 'utf8'));
+  if (manifest.version === 'tl2025' && Array.isArray(manifest.assets) && manifest.assets.length) {
+    const complete = await Promise.all(manifest.assets.map(async (asset) => {
+      for (let index = 0; index < asset.chunks; index++) {
+        try { await stat(path.join(root, 'client', 'engine-data', 'tl2025', `${asset.asset}.part${String(index).padStart(3, '0')}`)); }
+        catch { return false; }
+      }
+      return true;
+    }));
+    reusable = complete.every(Boolean);
+    if (reusable) console.log(`[cloudflare] reusing ${manifest.assets.length} prepared runtime assets.`);
+  }
+} catch { /* A clean Cloudflare checkout must download the runtime. */ }
+
+// Cloudflare Worker Builds runs `npm run build` in a fresh checkout, so this
+// branch downloads the gitignored runtime before Wrangler snapshots static files.
+if (!reusable) {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'latex-studio-engine-'));
+  const archive = path.join(temporary, 'bundles.tar.gz');
+  try {
   await rm(path.join(root, 'client', 'engine-data'), { recursive: true, force: true });
   const extracted = path.join(temporary, 'extract');
   await mkdir(extracted, { recursive: true });
@@ -66,6 +85,7 @@ try {
   assets.push(await writeChunks(path.join(temporary, 'busytex.js'), 'busytex.js'));
   await import('node:fs/promises').then(({ writeFile }) => writeFile(path.join(root, 'client', 'engine-data', 'manifest.json'), JSON.stringify({ version: 'tl2025', assets }, null, 2)));
   console.log(`[cloudflare] prepared ${assets.length} runtime assets as same-origin static chunks.`);
-} finally {
-  await rm(temporary, { recursive: true, force: true });
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
 }
