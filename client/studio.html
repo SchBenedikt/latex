@@ -6,7 +6,7 @@
   <title>LaTeX Studio</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="/styles/app.css?v=studio-4" />
-  <link rel="stylesheet" href="/styles/workspace.css?v=studio-4" />
+  <link rel="stylesheet" href="/styles/workspace.css?v=studio-5" />
 </head>
 <body>
 <div id="app" class="layout">
@@ -81,6 +81,7 @@
         <button class="rail-btn" data-panel="symbols" title="Symbols" data-icon="symbols">
           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 4 7v10l8 5 8-5V7l-8-5Zm0 2.3 5.7 3.56v7.28L12 19.7l-5.7-3.56V7.86L12 4.3Zm-1 4.2v2H8v1.5h3v2h1.5v-2h3V10.5h-3v-2H11Z"/></svg>
         </button>
+        <button class="rail-btn" data-panel="sources" title="Zotero sources" data-icon="book"></button>
 </nav>
 
       <div id="panels">
@@ -138,6 +139,16 @@
             <div id="symbol-cats" class="chip-row"></div>
           </div>
           <div id="symbol-grid" class="panel-body symbol-grid"></div>
+        </section>
+
+        <!-- Zotero library -->
+        <section class="panel" data-panel="sources">
+          <header class="panel-head"><span>Zotero library</span><div class="panel-actions"><button id="zotero-sync" title="Sync now" aria-label="Sync now" data-icon="refresh"></button><button id="zotero-settings-open" title="Zotero connection settings" aria-label="Zotero connection settings" data-icon="settings"></button></div></header>
+          <div class="zotero-status-row"><span id="zotero-connection-state">Not connected</span><span id="zotero-sync-state"></span></div>
+          <div class="zotero-search-wrap"><input id="zotero-search" type="search" placeholder="Search your sources…" aria-label="Search Zotero sources" /></div>
+          <label class="zotero-collection-wrap"><span class="sr-only">Collection</span><select id="zotero-collection" aria-label="Filter by collection"><option value="">All collections</option></select></label>
+          <div id="zotero-source-list" class="panel-body zotero-source-list"></div>
+          <button id="zotero-connect-open" class="zotero-connect-action">Connect Zotero</button>
         </section>
       </div>
 
@@ -262,6 +273,30 @@
 
 <!-- ============================================================= MODALS -->
 <div id="modal-root" class="hidden">
+  <div class="modal" data-modal="zotero-settings">
+    <div class="modal-card zotero-settings-card">
+      <h2>Connect Zotero</h2>
+      <p class="modal-intro">Browse a Zotero library here and keep it updated automatically. The connection is read-only; this browser sends requests directly to Zotero.</p>
+      <form id="zotero-settings-form">
+        <label class="field"><span>Library type</span><select id="zotero-library-type"><option value="user">Personal library</option><option value="group">Group library</option></select></label>
+        <label class="field"><span>User or group ID</span><input id="zotero-library-id" inputmode="numeric" pattern="[0-9]+" required placeholder="e.g. 475425" autocomplete="off" /></label>
+        <label class="field"><span>Read-only API key <small>(optional for public libraries)</small></span><input id="zotero-api-key" type="password" autocomplete="new-password" placeholder="Zotero API key" /></label>
+        <p class="zotero-key-note">Create a key with read access only in <a href="https://www.zotero.org/settings/keys" target="_blank" rel="noopener noreferrer">Zotero’s key settings</a>. It is stored in this browser’s local database and sent directly to Zotero. Enable file access if you want to preview PDF attachments.</p>
+        <div class="modal-actions"><button type="button" id="zotero-disconnect" class="tb-btn danger" hidden>Disconnect</button><div class="tb-flex"></div><button type="button" class="tb-btn" data-close="">Cancel</button><button type="submit" class="tb-btn primary">Connect and sync</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="modal" data-modal="zotero-source">
+    <div class="modal-card zotero-source-card">
+      <div class="zotero-detail-head"><div><div id="zotero-detail-type" class="zotero-detail-type"></div><h2 id="zotero-detail-title"></h2><p id="zotero-detail-creators" class="zotero-detail-creators"></p></div><button class="modal-dismiss" data-close="" aria-label="Close dialog" data-icon="close"></button></div>
+      <div id="zotero-detail-meta" class="zotero-detail-meta"></div>
+      <p id="zotero-detail-abstract" class="zotero-detail-abstract"></p>
+      <div id="zotero-detail-tags" class="zotero-detail-tags"></div>
+      <div class="zotero-attachment-heading">Attachments</div><div id="zotero-attachments" class="zotero-attachments"></div>
+      <div id="zotero-pdf-wrap" class="zotero-pdf-wrap" hidden><iframe id="zotero-pdf-frame" title="Zotero PDF attachment"></iframe></div>
+      <div class="modal-actions zotero-detail-actions"><a id="zotero-open-web" class="tb-btn" target="_blank" rel="noopener noreferrer">Open in Zotero</a><button id="zotero-add-bib" class="tb-btn primary">Add to project bibliography</button><button id="zotero-insert-cite" class="tb-btn">Insert citation</button></div>
+    </div>
+  </div>
   <!-- Project neu -->
   <div class="modal" data-modal="new-project">
     <div class="modal-card">
@@ -442,6 +477,6 @@
 <div id="toasts"></div>
 <div id="sync-flash" class="hidden"></div>
 
-<script src="/dist/app.js?v=studio-7"></script>
+<script src="/dist/app.js?v=studio-8"></script>
 </body>
 </html>

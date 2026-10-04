@@ -15,6 +15,7 @@ LaTeX Studio combines a CodeMirror editor, live PDF preview, SyncTeX navigation,
 - Project and file management, templates, ZIP import/export, and public GitHub repository import
 - LaTeX package diagnostics and installation through TeX Live or MiKTeX when available
 - BibTeX import and merge workflow for Zotero Better BibTeX exports
+- In-app Zotero library browser with 30-second incremental sync, source details, attachment preview, and citation insertion
 - Keyboard shortcuts, autocomplete, outline, symbols, and project-wide search/replace
 
 ## Requirements
@@ -38,7 +39,7 @@ Open [http://localhost:4180](http://localhost:4180). The landing page links to t
 
 For Cloudflare Workers, run `npm ci && npm run deploy:cloudflare`. This builds the app, downloads the TeX Live 2025 WebAssembly runtime, splits its larger runtime files into Cloudflare-compatible static assets, then publishes the Worker and assets together. Runtime downloads total about 230 MB during deployment; visitors download the 31 MB compiler and only the package bundles their documents use. See [Cloudflare deployment](docs/CLOUDFLARE.md) for browser requirements, supported engines, and limits.
 
-The deployed editor automatically uses a browser-local workspace backed by IndexedDB. Users can create and edit projects, files, and folders, search and replace text, import/export ZIP archives, and keep work across reloads in the same browser profile. **PDF compilation also works on the hosted domain**: pdfLaTeX and XeLaTeX run in WebAssembly inside the visitor's browser. Project sources and generated PDFs stay in that browser; the Worker only serves static app/compiler assets and byte ranges. Browser-local files are separate from files on the computer's filesystem; export a project ZIP to download a copy.
+The deployed editor automatically uses a browser-local workspace backed by IndexedDB. Users can create and edit projects, files, and folders, search and replace text, import/export ZIP archives, and keep work across reloads in the same browser profile. **PDF compilation also works on the hosted domain**: pdfLaTeX and XeLaTeX run in WebAssembly inside the visitor's browser. Project sources and generated PDFs stay in that browser; the Worker only serves static app/compiler assets and byte ranges. The Zotero browser integration also stores its read-only key and cache locally and sends library requests directly to Zotero. Browser-local files are separate from files on the computer's filesystem; export a project ZIP to download a copy.
 
 Use `npm start` for the full local Node.js workflow, including local TeX installations, LuaLaTeX, SyncTeX, system package diagnostics/installation, GitHub import, and Zotero/BibTeX merge tools.
 
@@ -62,6 +63,6 @@ npm run serve
 
 ## Data and privacy
 
-Projects are stored locally under `projects/`. That directory is intentionally excluded from version control. GitHub import downloads a public repository archive into a new local project; it does not push changes back to GitHub. Zotero support uses BibTeX exports (including Better BibTeX) and does not require an account connection.
+Projects are stored locally under `projects/`. That directory is intentionally excluded from version control. GitHub import downloads a public repository archive into a new local project; it does not push changes back to GitHub. Zotero supports both direct read-only browsing through the Zotero Web API and BibTeX imports/exports, including Better BibTeX.
 
 LaTeX Studio is published without a license declaration in this initial release. All rights are reserved by default; obtain permission before redistributing or reusing the code.

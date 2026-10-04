@@ -25,6 +25,14 @@ async function all() {
     req.onerror = () => reject(req.error);
   });
 }
+async function byId(entryId) {
+  const database = await db();
+  return new Promise((resolve, reject) => {
+    const req = database.transaction(STORE).objectStore(STORE).get(entryId);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
 async function put(entry) {
   const database = await db();
   return new Promise((resolve, reject) => {
@@ -164,6 +172,10 @@ async function compiler() {
 }
 
 export const browserWorkspace = {
+  async integrationGet(key) { return (await byId(`@integration/${key}`))?.value ?? null; },
+  async integrationSet(key, value) { return put({ id: `@integration/${key}`, type: 'integration', value }); },
+  async integrationDelete(key) { return remove(`@integration/${key}`); },
+  async integrationList(prefix) { return (await all()).filter((entry) => entry.id.startsWith(`@integration/${prefix}`)); },
   async state() {
     const entries = await all();
     const projects = [...new Set(entries.map((x) => x.project))].filter(Boolean).sort();

@@ -21,6 +21,7 @@ import { initStatus } from './status.js';
 import { initProjects, exportProject } from './projects.js';
 import { applyEditorSettings } from './editor/index.js';
 import { initPackages } from './packages.js';
+import { initZotero, refreshZoteroPanel } from './zotero.js';
 import { initIcons, icon } from './icons.js';
 
 loadPersisted();
@@ -97,6 +98,7 @@ async function boot() {
   initStatus();
   initProjects();
   initPackages();
+  initZotero();
   wireUi();
   wireEvents();
   wireKeys();
@@ -252,6 +254,7 @@ function wireUi() {
       window.dispatchEvent(new Event('resize'));
       if (panel === 'search') setTimeout(() => $('#search-input').focus(), 60);
       if (panel === 'symbols') setTimeout(() => $('#symbol-filter').focus(), 60);
+      if (panel === 'sources') refreshZoteroPanel();
     });
   }
 

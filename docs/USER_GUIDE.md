@@ -26,4 +26,6 @@ ZIP import creates a separate project and does not overwrite existing projects. 
 
 ## Zotero bibliography workflow
 
-Export a `.bib` file from Zotero, preferably with Better BibTeX, then use the bibliography import action in a project. New citation keys are added; matching keys are shown for confirmation before replacement. Save any open bibliography edits before importing. See [Integrations](INTEGRATIONS.md) for details.
+Open **Zotero sources** in the sidebar to connect a personal or group library and browse its sources, abstracts, tags, and PDF attachments in the workspace. Keep the LaTeX Studio tab open for automatic checks every 30 seconds; Zotero desktop changes appear after Zotero has synced them to its online library. Select a source to insert its citation or add its BibTeX entry to the active project. The connection is read-only and stored in the current browser. See [Integrations](INTEGRATIONS.md) for API key setup and privacy details.
+
+You can also export a `.bib` file from Zotero, preferably with Better BibTeX, then use the project menu's bibliography import action. That workflow preserves Better BibTeX citation keys and remains useful for offline libraries. Save any open bibliography edits before importing.
