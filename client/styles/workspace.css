@@ -237,7 +237,11 @@ button:focus-visible, [role="tab"]:focus-visible, [role="radio"]:focus-visible {
 .zotero-pdf-wrap { height: min(58vh, 600px); margin-top: 12px; border: 1px solid var(--border); background: var(--bg-1); }
 .zotero-pdf-wrap[hidden] { display: none; }
 .zotero-pdf-wrap iframe { display: block; width: 100%; height: 100%; border: 0; }
+.zotero-pdf-wrap img { display: block; width: 100%; height: 100%; object-fit: contain; background: var(--bg-1); }
+.zotero-pdf-wrap [hidden] { display: none !important; }
 .zotero-detail-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.zotero-citation-choice { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-faint); font-size: 10px; }
+.zotero-citation-choice select { max-width: 160px; height: 30px; border: 1px solid var(--border); border-radius: 5px; padding: 0 7px; background: var(--bg); color: var(--fg); font: inherit; }
 .zotero-detail-actions[hidden] { display: none; }
 .zotero-detail-actions a { text-decoration: none; }
 .zotero-settings-card .modal-actions { justify-content: flex-end; }

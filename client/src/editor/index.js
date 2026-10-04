@@ -332,6 +332,13 @@ export function insertText(text, cursorOffset = null) {
   editorView.focus();
 }
 
+/** Insert generated text at an absolute document offset without moving the caret. */
+export function insertTextAt(text, position) {
+  const doc = editorView.state.doc;
+  const offset = Math.max(0, Math.min(Number(position) || 0, doc.length));
+  editorView.dispatch({ changes: { from: offset, to: offset, insert: text }, scrollIntoView: false });
+}
+
 /* ------------------------------------------------------------ Snippets */
 
 function findClosingBrace(text, start) {

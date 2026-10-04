@@ -15,7 +15,8 @@ LaTeX Studio combines a CodeMirror editor, live PDF preview, SyncTeX navigation,
 - Project and file management, templates, ZIP import/export, and public GitHub repository import
 - LaTeX package diagnostics and installation through TeX Live or MiKTeX when available
 - BibTeX import and merge workflow for Zotero Better BibTeX exports
-- In-app Zotero library browser with 30-second incremental sync, source details, attachment preview, and citation insertion
+- In-app Zotero library browser with 30-second incremental sync, collection filtering, source details, PDF/image/HTML snapshot previews, and configurable citation insertion
+- Browser-side BibTeX resolution for cited entries, with explicit diagnostics for missing citation keys
 - Keyboard shortcuts, autocomplete, outline, symbols, and project-wide search/replace
 
 ## Requirements

@@ -3,7 +3,7 @@ import { browserWorkspace } from './browser-workspace.js';
 import { api } from './api.js';
 import { state, emit } from './state.js';
 import { $, el, clear, openModal, closeModal, toast } from './util.js';
-import { insertText, reloadFile, currentPath } from './editor/index.js';
+import { insertText, insertTextAt, reloadFile, currentPath, currentText } from './editor/index.js';
 
 const CONFIG_KEY = 'zotero/config';
 const POLL_MS = 30_000;
@@ -13,7 +13,7 @@ let currentItems = [];
 let selectedItem = null;
 let syncing = false;
 let timer = null;
-let pdfObjectUrl = null;
+let previewObjectUrl = null;
 let retryAfter = 0;
 
 function libraryKey(c = config) { return c ? `${c.libraryType}:${c.libraryId}` : ''; }
@@ -253,7 +253,7 @@ async function disconnectLibrary() {
   await browserWorkspace.integrationDelete(`zotero/state/${libraryKey()}`);
   await browserWorkspace.integrationDelete(CONFIG_KEY);
   config = null; libraryState = null; currentItems = [];
-  revokePdf(); closeModal(null);
+  revokePreview(); closeModal(null);
   await refreshZoteroPanel();
   toast('Zotero disconnected and its local cache was removed.', { type: 'ok' });
 }
@@ -269,7 +269,7 @@ function sourceMetadata(item) {
 
 async function openSource(item) {
   selectedItem = item;
-  revokePdf();
+  revokePreview();
   const data = item.data || {};
   $('#zotero-detail-title').textContent = data.title || '(Untitled source)';
   $('#zotero-detail-type').textContent = String(data.itemType || 'Source').replace(/([a-z])([A-Z])/g, '$1 $2');
@@ -290,6 +290,8 @@ async function openSource(item) {
   if (validWebLink) openWeb.href = alt;
   $('#zotero-pdf-wrap').hidden = true;
   $('#zotero-pdf-frame').removeAttribute('src');
+  $('#zotero-image-frame').hidden = true;
+  $('#zotero-image-frame').removeAttribute('src');
   const attachments = $('#zotero-attachments'); clear(attachments);
   const hasChildren = Number(item.meta?.numChildren || 0) > 0;
   attachments.append(el('span', { class: 'zotero-attachment-muted', text: hasChildren ? 'Loading attachments…' : 'No attached files.' }));
@@ -304,9 +306,17 @@ async function openSource(item) {
     for (const file of files) {
       const d = file.data || {};
       const isPdf = d.contentType === 'application/pdf' || /\.pdf$/i.test(d.filename || '');
+      const isImage = String(d.contentType || '').startsWith('image/') || /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(d.filename || '');
+      const isSnapshot = d.contentType === 'text/html' || d.linkMode === 'imported_url' || /\.html?$/i.test(d.filename || '');
+      const previewable = isPdf || isImage || isSnapshot;
+      const action = d.linkMode === 'linked_url' && d.url
+        ? el('a', { class: 'tb-btn', href: d.url, target: '_blank', rel: 'noopener noreferrer', text: 'Open link' })
+        : previewable
+          ? el('button', { class: 'tb-btn', text: isPdf ? 'Preview PDF' : isImage ? 'Preview image' : 'Preview snapshot', onclick: () => previewAttachment(file) })
+          : el('button', { class: 'tb-btn', text: 'Download', onclick: () => previewAttachment(file, { download: true }) });
       attachments.append(el('div', { class: 'zotero-attachment-row' },
         el('span', { class: 'zotero-attachment-name', text: d.title || d.filename || 'Attachment' }),
-        isPdf ? el('button', { class: 'tb-btn', text: 'Preview PDF', onclick: () => previewAttachment(file) }) : null,
+        action,
       ));
     }
   } catch (error) {
@@ -315,54 +325,169 @@ async function openSource(item) {
   }
 }
 
-async function previewAttachment(item) {
+async function previewAttachment(item, { download = false } = {}) {
   const sourceKey = selectedItem?.key;
+  revokePreview();
   const frame = $('#zotero-pdf-frame');
+  const image = $('#zotero-image-frame');
   const wrap = $('#zotero-pdf-wrap');
+  const metadata = item.data || {};
+  const filename = metadata.filename || metadata.title || 'zotero-attachment';
   wrap.hidden = false;
-  frame.title = item.data?.filename || item.data?.title || 'Zotero PDF attachment';
+  frame.title = filename;
   frame.src = 'about:blank';
+  frame.hidden = false;
+  image.hidden = true;
+  image.removeAttribute('src');
   try {
     const response = await fetch(`https://api.zotero.org/${rootPath()}/items/${encodeURIComponent(item.key)}/file`, { headers: requestHeaders() });
     if (!response.ok) throw new Error(response.status === 403 ? 'Enable file access for this API key.' : `Zotero returned ${response.status}.`);
     if (selectedItem?.key !== sourceKey) return;
-    revokePdf();
-    pdfObjectUrl = URL.createObjectURL(await response.blob());
-    frame.src = pdfObjectUrl;
-  } catch (error) { toast(`PDF preview failed: ${error.message}`, { type: 'err', ms: 7000 }); }
+    const blob = await response.blob();
+    previewObjectUrl = URL.createObjectURL(blob);
+    if (download) {
+      const link = document.createElement('a'); link.href = previewObjectUrl; link.download = filename; link.click();
+      return;
+    }
+    const type = metadata.contentType || blob.type;
+    if (type.startsWith('image/') || /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(filename)) {
+      frame.hidden = true; image.hidden = false; image.alt = filename; image.src = previewObjectUrl;
+    } else {
+      frame.hidden = false;
+      // Sandboxed iframe keeps saved HTML snapshots from running scripts.
+      if (type === 'text/html' || /\.html?$/i.test(filename)) frame.setAttribute('sandbox', '');
+      else frame.removeAttribute('sandbox');
+      frame.src = previewObjectUrl;
+    }
+  } catch (error) { toast(`Attachment preview failed: ${error.message}`, { type: 'err', ms: 7000 }); }
 }
 
-function revokePdf() {
-  if (pdfObjectUrl) URL.revokeObjectURL(pdfObjectUrl);
-  pdfObjectUrl = null;
+function revokePreview() {
+  if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+  previewObjectUrl = null;
+  const frame = $('#zotero-pdf-frame');
+  const image = $('#zotero-image-frame');
+  if (frame) { frame.hidden = false; frame.removeAttribute('src'); frame.removeAttribute('sandbox'); }
+  if (image) { image.hidden = true; image.removeAttribute('src'); }
 }
 
-async function addToBibliography() {
-  const item = selectedItem;
-  if (!state.project || !item?.bibtex) { toast('Open a project and choose a source with a BibTeX export.', { type: 'warn' }); return; }
+async function addBibtexToProject(item) {
+  if (!state.project || !item?.bibtex) { toast('Open a project and choose a source with a BibTeX export.', { type: 'warn' }); return null; }
   const files = (await api.projectFiles(state.project)).files || [];
-  const target = files.find((name) => name.toLocaleLowerCase() === 'references.bib') || files.find((name) => /\.bib$/i.test(name)) || 'references.bib';
+  const mainPath = `${state.project}/${state.settings.mainFile || 'main.tex'}`;
+  const mainDoc = state.docs.get(mainPath);
+  const mainSource = currentPath() === mainPath ? currentText() : mainDoc?.content || (await api.file(mainPath).catch(() => ({ content: '' }))).content;
+  const requestedBib = mainSource.match(/\\(?:bibliography|addbibresource)(?:\[[^\]]*\])?\s*\{([^}]+)\}/i)?.[1]?.split(',')[0]?.trim();
+  const requestedFile = requestedBib ? (/\.bib$/i.test(requestedBib) ? requestedBib : `${requestedBib}.bib`).replace(/^\.\//, '') : '';
+  const target = (requestedFile && files.find((name) => name.toLocaleLowerCase() === requestedFile.toLocaleLowerCase()))
+    || requestedFile
+    || files.find((name) => name.toLocaleLowerCase() === 'references.bib')
+    || files.find((name) => /\.bib$/i.test(name)) || 'references.bib';
   const path = `${state.project}/${target}`;
   const openDoc = state.docs.get(path);
-  if (openDoc && !openDoc.saved) { toast(`Save ${target} before adding a Zotero entry.`, { type: 'warn', ms: 6000 }); return; }
+  if (openDoc && !openDoc.saved) { toast(`Save ${target} before adding a Zotero entry.`, { type: 'warn', ms: 6000 }); return null; }
   const existing = files.includes(target) ? (await api.file(path)).content : '';
   const key = citationKey(item);
-  if (!key) { toast('Zotero did not provide a BibTeX citation key for this source.', { type: 'err' }); return; }
-  const existingKeys = new Set([...String(existing).matchAll(/@\\w+\\s*\\{\\s*([^,\\s]+)/g)].map((match) => match[1].toLocaleLowerCase()));
-  if (existingKeys.has(key.toLocaleLowerCase())) { toast(`Citation key “${key}” is already in ${target}; nothing was overwritten.`, { type: 'warn', ms: 6000 }); return; }
+  if (!key) { toast('Zotero did not provide a BibTeX citation key for this source.', { type: 'err' }); return null; }
+  const existingKeys = new Set([...String(existing).matchAll(/@[\w-]+\s*[\{(]\s*([^,\s]+)/g)].map((match) => match[1].toLocaleLowerCase()));
+  if (existingKeys.has(key.toLocaleLowerCase())) return { target, key, added: false };
   const next = `${String(existing).trimEnd()}${String(existing).trim() ? '\n\n' : ''}${item.bibtex.trim()}\n`;
   await api.saveFile(path, next);
   await reloadFile(path);
   emit('tree:refresh'); emit('meta:refresh');
-  toast(`Added ${key} to ${target}.`, { type: 'ok' });
+  return { target, key, added: true };
 }
 
-function insertCitation() {
-  const key = citationKey(selectedItem);
+async function addToBibliography() {
+  const result = await addBibtexToProject(selectedItem);
+  if (!result) return;
+  toast(result.added ? `Added ${result.key} to ${result.target}.` : `Citation key “${result.key}” is already in ${result.target}; nothing was overwritten.`, { type: result.added ? 'ok' : 'warn', ms: 5000 });
+}
+
+async function ensureMainBibliography(target, citationCommand = 'cite') {
+  if (!state.project) return;
+  const relativeMain = state.settings.mainFile || 'main.tex';
+  const path = `${state.project}/${relativeMain}`;
+  const active = currentPath() === path;
+  const openDoc = state.docs.get(path);
+  if (!active && openDoc && !openDoc.saved) {
+    toast(`Save ${relativeMain} before Zotero can add the bibliography command.`, { type: 'warn', ms: 6000 });
+    return false;
+  }
+  let source;
+  if (active) source = currentText();
+  else if (openDoc) source = openDoc.content;
+  else source = (await api.file(path)).content;
+  const hasBiblatex = /\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbiblatex\b/i.test(source);
+  const wantsBiblatex = ['parencite', 'textcite', 'autocite'].includes(citationCommand);
+  const biblatex = hasBiblatex || wantsBiblatex;
+  const bibName = target.replace(/\.bib$/i, '');
+  const insertions = [];
+  if (biblatex) {
+    if (!hasBiblatex) {
+      const begin = source.search(/\\begin\s*\{document\}/i);
+      const packageLine = '\\usepackage[backend=biber,style=numeric]{biblatex}\n';
+      insertions.push({ position: begin >= 0 ? begin : 0, text: packageLine });
+    }
+    if (!/\\addbibresource(?:\[[^\]]*\])?\s*\{/i.test(source)) {
+      const begin = source.search(/\\begin\s*\{document\}/i);
+      const resource = `\\addbibresource{${target}}\n`;
+      insertions.push({ position: begin >= 0 ? begin : 0, text: resource });
+    }
+    if (!/\\printbibliography\b/i.test(source)) {
+      const end = source.search(/\\end\s*\{document\}/i);
+      insertions.push({ position: end >= 0 ? end : source.length, text: `${end >= 0 ? '' : '\n'}\\printbibliography\n` });
+    }
+  } else {
+    if (['citep', 'citet'].includes(citationCommand) && !/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bnatbib\b/i.test(source)) {
+      const begin = source.search(/\\begin\s*\{document\}/i);
+      insertions.push({ position: begin >= 0 ? begin : 0, text: '\\usepackage{natbib}\n' });
+    }
+    if (!/\\bibliography\s*\{/i.test(source)) {
+      const style = /\\bibliographystyle\s*\{/i.test(source) ? '' : '\\bibliographystyle{plain}\n';
+      const command = `${style}\\bibliography{${bibName}}\n`;
+      const end = source.search(/\\end\s*\{document\}/i);
+      insertions.push({ position: end >= 0 ? end : source.length, text: `${end >= 0 ? '' : '\n'}${command}` });
+    }
+  }
+  if (!insertions.length) return true;
+  let next = source;
+  for (const item of [...insertions].sort((a, b) => b.position - a.position)) next = `${next.slice(0, item.position)}${item.text}${next.slice(item.position)}`;
+  if (active) for (const item of [...insertions].sort((a, b) => b.position - a.position)) insertTextAt(item.text, item.position);
+  else {
+    await api.saveFile(path, next);
+    await reloadFile(path);
+  }
+  return true;
+}
+
+async function insertCitation() {
+  const item = selectedItem;
+  const key = citationKey(item);
   if (!key) { toast('This source has no citation key.', { type: 'err' }); return; }
   if (!/\.tex$/i.test(currentPath() || '')) { toast('Open a .tex document before inserting a citation.', { type: 'warn' }); return; }
+  const bibliography = await addBibtexToProject(item);
+  if (!bibliography) return;
   closeModal(null);
-  insertText(`\\cite{${key}}`);
+  let command = $('#zotero-citation-command')?.value || 'cite';
+  const mainPath = `${state.project}/${state.settings.mainFile || 'main.tex'}`;
+  const mainText = currentPath() === mainPath ? currentText() : state.docs.get(mainPath)?.content || (await api.file(mainPath).catch(() => ({ content: '' }))).content;
+  const usesBiblatex = /\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbiblatex\b/i.test(mainText);
+  if (usesBiblatex && command === 'citep') command = 'parencite';
+  if (usesBiblatex && command === 'citet') command = 'textcite';
+  insertText(`\\${command}{${key}}`);
+  const configured = await ensureMainBibliography(bibliography.target, command);
+  toast(`Inserted citation and ${bibliography.added ? 'added its BibTeX entry' : 'confirmed its BibTeX entry'} in ${bibliography.target}.${configured === false ? ` Save ${state.settings.mainFile} and add a bibliography command before building.` : ' Build the project to update the PDF.'}`, { type: configured === false ? 'warn' : 'ok', ms: 7000 });
+}
+
+async function copyBibtex() {
+  if (!selectedItem?.bibtex) { toast('No BibTeX export is available for this source.', { type: 'warn' }); return; }
+  try {
+    await navigator.clipboard.writeText(selectedItem.bibtex.trim());
+    toast('BibTeX entry copied to clipboard.', { type: 'ok' });
+  } catch (error) {
+    toast(`Clipboard access failed: ${error.message}`, { type: 'err' });
+  }
 }
 
 async function connectFromForm(event) {
@@ -400,6 +525,7 @@ export function initZotero() {
   $('#zotero-search')?.addEventListener('input', () => refreshZoteroPanel());
   $('#zotero-collection')?.addEventListener('change', () => refreshZoteroPanel());
   $('#zotero-add-bib')?.addEventListener('click', addToBibliography);
+  $('#zotero-copy-bib')?.addEventListener('click', copyBibtex);
   $('#zotero-insert-cite')?.addEventListener('click', insertCitation);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || timer || !config) return;

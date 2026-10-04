@@ -8,6 +8,127 @@ let templatesPromise;
 let compilerPromise;
 let compilerLogs = [];
 
+// Siglum's browser worker runs LaTeX passes but does not launch BibTeX. Supply
+// the resulting classic .bbl as an extra input so citekeys resolve offline.
+function parseBibFile(input) {
+  const text = String(input || '');
+  const entries = new Map();
+  let at = 0;
+  while ((at = text.indexOf('@', at)) >= 0) {
+    const start = at;
+    const head = text.slice(at).match(/^@([\w-]+)\s*([({])/);
+    if (!head) { at++; continue; }
+    at += head[0].length;
+    const opener = head[2], closer = opener === '{' ? '}' : ')';
+    const payloadStart = at;
+    let depth = 1, quoted = false, escaped = false;
+    for (; at < text.length && depth; at++) {
+      const ch = text[at];
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\') { escaped = true; continue; }
+      if (ch === '"') quoted = !quoted;
+      if (!quoted && ch === opener) depth++;
+      else if (!quoted && ch === closer) depth--;
+    }
+    const type = head[1].toLowerCase();
+    if (depth || ['comment', 'preamble', 'string'].includes(type)) continue;
+    const payload = text.slice(payloadStart, at - 1);
+    const comma = payload.indexOf(',');
+    if (comma < 1) continue;
+    const key = payload.slice(0, comma).trim();
+    const fields = {};
+    const tail = payload.slice(comma + 1);
+    const fieldHead = /(?:^|,)\s*([\w-]+)\s*=\s*/g;
+    let m;
+    while ((m = fieldHead.exec(tail))) {
+      let i = fieldHead.lastIndex;
+      while (/\s/.test(tail[i] || '')) i++;
+      const ch = tail[i];
+      if (ch === '{' || ch === '"') {
+        const begin = ++i;
+        let level = ch === '{' ? 1 : 0, q = ch === '"', esc = false;
+        for (; i < tail.length; i++) {
+          const c = tail[i];
+          if (esc) { esc = false; continue; }
+          if (c === '\\') { esc = true; continue; }
+          if (ch === '{' && c === '{') level++;
+          else if (ch === '}' && ch === '{' && --level === 0) break;
+          else if (q && c === '"') break;
+        }
+        fields[m[1].toLowerCase()] = tail.slice(begin, i).trim();
+        fieldHead.lastIndex = i + 1;
+      } else {
+        const end = tail.indexOf(',', i);
+        fields[m[1].toLowerCase()] = tail.slice(i, end < 0 ? tail.length : end).trim();
+      }
+    }
+    if (key) entries.set(key, { type, key, fields });
+    if (at <= start) at = start + 1;
+  }
+  return entries;
+}
+
+function makeBibItem(entry) {
+  const f = entry.fields;
+  const get = (...keys) => keys.map((key) => f[key]).find(Boolean) || '';
+  const parts = [];
+  const author = get('author', 'editor');
+  if (author) parts.push(author.replace(/\s+and\s+/gi, ', '));
+  if (get('title')) parts.push(`\\emph{${get('title')}}`);
+  if (get('journal', 'booktitle', 'publisher', 'school', 'institution')) parts.push(`\\emph{${get('journal', 'booktitle', 'publisher', 'school', 'institution')}}`);
+  const details = [get('volume') && `vol. ${get('volume')}`, get('number') && `no. ${get('number')}`, get('pages') && `pp. ${get('pages')}`].filter(Boolean).join(', ');
+  if (details) parts.push(details);
+  if (get('year', 'date')) parts.push(get('year', 'date'));
+  if (get('doi')) parts.push(`doi: ${get('doi')}`);
+  return `\\bibitem{${entry.key}} ${parts.join('. ')}.`;
+}
+
+function browserBbl(files, source) {
+  if (!/\\(?:bibliography\s*\{|cite\w*\s*\{|nocite\s*\{)/i.test(source)) return null;
+  const names = [...source.matchAll(/\\bibliography\s*\{([^}]+)\}/gi)].flatMap((m) => m[1].split(',').map((name) => name.trim()).filter(Boolean));
+  if (!names.length) return null;
+  const entries = new Map();
+  for (const name of names) {
+    const file = /\.bib$/i.test(name) ? name : `${name}.bib`;
+    for (const [key, entry] of parseBibFile(files[file] ?? files[file.replace(/^\.\//, '')] ?? '')) entries.set(key, entry);
+  }
+  const citeKeys = new Set([...source.matchAll(/\\(?:cite\w*|nocite)\s*(?:\[[^\]]*\]\s*){0,2}\{([^}]+)\}/gi)].flatMap((m) => m[1].split(',').map((key) => key.trim())));
+  if (citeKeys.has('*')) for (const key of entries.keys()) citeKeys.add(key);
+  const selected = [...citeKeys].map((key) => entries.get(key)).filter(Boolean);
+  if (!selected.length) return null;
+  return { file: `\\begin{thebibliography}{${selected.length}}\n${selected.map(makeBibItem).join('\n')}\n\\end{thebibliography}\n`, count: selected.length, missing: [...citeKeys].filter((key) => key !== '*' && !entries.has(key)) };
+}
+
+function normalizeBibliographySource(source) {
+  if (!/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbiblatex\b/i.test(source)) {
+    const needsNatbib = /\\(?:citep|citet)\s*(?:\[[^\]]*\]\s*)?\{/i.test(source) && !/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bnatbib\b/i.test(source);
+    return { source: needsNatbib ? source.replace(/\\begin\s*\{document\}/, '\\usepackage{natbib}\n\\begin{document}') : source, biblatex: false, resources: [] };
+  }
+  const resources = [...source.matchAll(/\\addbibresource(?:\[[^\]]*\])?\s*\{([^}]+)\}/gi)].map((match) => match[1].trim());
+  const resourceNames = resources.map((name) => name.replace(/\.bib$/i, '')).join(',');
+  let normalized = source
+    .replace(/\\usepackage(\[[^\]]*\])?\s*\{([^}]+)\}/gi, (command, options, packages) => {
+      const remaining = packages.split(',').map((name) => name.trim()).filter((name) => name.toLowerCase() !== 'biblatex');
+      return remaining.length ? `\\usepackage${options || ''}{${remaining.join(',')}}` : '';
+    })
+    .replace(/\\addbibresource(?:\[[^\]]*\])?\s*\{[^}]+\}/gi, '')
+    .replace(/\\parencite(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\citep')
+    .replace(/\\parencites(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\citep')
+    .replace(/\\textcite(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\citet')
+    .replace(/\\textcites(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\citet')
+    .replace(/\\autocite(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\cite')
+    .replace(/\\autocites(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\cite')
+    .replace(/\\footcite(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\cite')
+    .replace(/\\smartcite(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\cite')
+    .replace(/\\supercite(?=\s*(?:\[[^\]]*\]\s*)*\{)/g, '\\cite')
+    .replace(/\\(?:ExecuteBibliographyOptions|DeclareLanguageMapping|DefineBibliographyStrings)\s*(?:\[[^\]]*\]\s*)?\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g, '')
+    .replace(/\\printbibliography(?:\[[^\]]*\])?/g, `\\bibliographystyle{plain}\\bibliography{${resourceNames}}`);
+  if (/\\(?:citep|citet)\s*\{/.test(normalized) && !/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bnatbib\b/i.test(normalized)) {
+    normalized = normalized.replace(/\\begin\s*\{document\}/, '\\usepackage{natbib}\n\\begin{document}');
+  }
+  return { source: normalized, biblatex: true, resources };
+}
+
 function db() {
   if (!dbPromise) dbPromise = new Promise((resolve, reject) => {
     const open = indexedDB.open(DB_NAME, 1);
@@ -323,7 +444,19 @@ export const browserWorkspace = {
     compilerLogs = [];
     try {
       const instance = await compiler();
-      const source = decode(mainEntry.content);
+      const rawSource = decode(mainEntry.content);
+      const normalized = normalizeBibliographySource(rawSource);
+      const source = normalized.source;
+      if (normalized.biblatex) compilerLogs.push('[BIB] biblatex source adapted to the browser BibTeX path (numeric/plain style; common cite commands supported).');
+      const bibliography = browserBbl(Object.fromEntries(Object.entries(additionalFiles).map(([path, content]) => [path, typeof content === 'string' ? content : new TextDecoder().decode(content)])), source);
+      const hasBibliographyCommands = /\\(?:bibliography\s*\{|cite\w*\s*\{)/i.test(source);
+      if (bibliography) {
+        additionalFiles['document.bbl'] = bibliography.file;
+        compilerLogs.push(`[BIB] Browser bibliography pass: ${bibliography.count} cited entr${bibliography.count === 1 ? 'y' : 'ies'} resolved.`);
+        if (bibliography.missing.length) compilerLogs.push(`[BIB] Missing citation key${bibliography.missing.length === 1 ? '' : 's'} in the project's .bib files: ${bibliography.missing.join(', ')}`);
+      } else if (/\\(?:bibliography\s*\{|cite\w*\s*\{)/i.test(source)) {
+        compilerLogs.push('[BIB] No matching .bib database or citation entries were found. Check that the bibliography file is saved in the project and named in \\bibliography{...}.');
+      }
       const started = performance.now();
       // TeX Live's compact base bundle contains babel.sty but omits regional
       // language definition files. Babel fails before Siglum's normal missing-
@@ -337,7 +470,9 @@ export const browserWorkspace = {
           const german = await instance.ctanFetcher.fetchPackage('babel-german');
           if (!german) compilerLogs.push('[PACKAGE] Could not load babel-german from the static package cache or TeX Live service.');
         }
-        result = await instance.compile(source, { engine, additionalFiles, useCache: true });
+        // The worker's PDF cache is keyed only by the TeX source, so bypass it
+        // when a .bib file participates to avoid stale citations after edits.
+        result = await instance.compile(source, { engine, additionalFiles, useCache: !hasBibliographyCommands });
       } finally { globalThis.fetch = originalFetch; }
       const duration = Math.round(performance.now() - started);
       if (!result.success || !result.pdf?.length) {
