@@ -3,9 +3,8 @@
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
 
-/engine-static/tl2025/busytex.wasm
-  Content-Type: application/wasm
-  Content-Encoding: gzip
+/engine-static/tl2025/busytex.wasm.gz
+  Content-Type: application/gzip
 
 /api/texlive/*
   Content-Type: application/x-xz

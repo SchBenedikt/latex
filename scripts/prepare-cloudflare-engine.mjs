@@ -45,7 +45,7 @@ async function writeChunks(source, relative) {
 async function materializeStaticAssets(manifest) {
   await rm(staticRoot, { recursive: true, force: true });
   for (const asset of manifest.assets) {
-    const target = path.join(staticRoot, asset.asset);
+    const target = path.join(staticRoot, asset.asset === 'busytex.wasm' ? 'busytex.wasm.gz' : asset.asset);
     if (asset.asset === 'busytex.wasm') {
       await mkdir(path.dirname(target), { recursive: true });
       async function* wasmParts() {

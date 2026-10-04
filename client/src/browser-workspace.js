@@ -102,34 +102,50 @@ async function entriesUnder(project, path) {
   const prefix = path ? `${path}/` : '';
   return (await list(project)).filter((x) => x.path === path || x.path.startsWith(prefix));
 }
+async function fetchCompilerAsset(originalFetch, args) {
+  const input = args[0];
+  const requestUrl = String(input?.url || input);
+  let response = await originalFetch(...args);
+  // Workers static assets do not preserve a manually assigned
+  // Content-Encoding header. Fetch the explicitly named gzip asset and
+  // decode it here before Siglum passes the bytes to WebAssembly.compile().
+  if (requestUrl.includes('/engine-static/') && requestUrl.includes('/busytex.wasm.gz') && response.ok) {
+    if (typeof DecompressionStream === 'function') {
+      const headers = new Headers(response.headers);
+      headers.delete('content-encoding');
+      headers.delete('content-length');
+      headers.set('content-type', 'application/wasm');
+      response = new Response(response.body.pipeThrough(new DecompressionStream('gzip')), {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      });
+    } else {
+      const fallbackUrl = requestUrl.replace('/engine-static/tl2025/busytex.wasm.gz', '/engine/tl2025/busytex.wasm');
+      response = await originalFetch(input instanceof Request ? new Request(fallbackUrl, input) : fallbackUrl, input instanceof Request ? undefined : args[1]);
+    }
+  }
+  if (requestUrl.includes('/engine-static/') && response.status === 404) {
+    const fallbackUrl = requestUrl.replace('/engine-static/', '/engine/');
+    const fallback = input instanceof Request ? new Request(fallbackUrl, input) : fallbackUrl;
+    response = await originalFetch(fallback, input instanceof Request ? undefined : args[1]);
+  }
+  if (requestUrl.includes('/engine') || requestUrl.includes('/api/texlive/')) {
+    compilerLogs.push(`[HTTP ${response.status}] ${requestUrl} · ${response.headers.get('content-type') || 'unknown type'}`);
+    if (response.status === 429) {
+      const body = await response.clone().text().catch(() => '');
+      if (/error\s*1027|workers? free plan/i.test(body)) compilerLogs.push('[Cloudflare Error 1027] A Worker request was rate limited; static compiler assets remain available.');
+    }
+  }
+  return response;
+}
 async function compiler() {
   if (!compilerPromise) {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = async (...args) => {
-      const input = args[0];
-      const requestUrl = String(input?.url || input);
-      let response = await originalFetch(...args);
-      // Large optional bundles stay behind the Worker proxy. The normal
-      // compiler runtime and manifests are served directly as static assets.
-      if (requestUrl.includes('/engine-static/') && response.status === 404) {
-        const fallbackUrl = requestUrl.replace('/engine-static/', '/engine/');
-        const fallback = input instanceof Request
-          ? new Request(fallbackUrl, input)
-          : fallbackUrl;
-        response = await originalFetch(fallback, input instanceof Request ? undefined : args[1]);
-      }
-      if (requestUrl.includes('/engine') || requestUrl.includes('/api/texlive/')) {
-        compilerLogs.push(`[HTTP ${response.status}] ${requestUrl} · ${response.headers.get('content-type') || 'unknown type'}`);
-        if (response.status === 429) {
-          const body = await response.clone().text().catch(() => '');
-          if (/error\s*1027|workers? free plan/i.test(body)) compilerLogs.push('[Cloudflare Error 1027] A Worker request was rate limited; static compiler assets remain available.');
-        }
-      }
-      return response;
-    };
+    globalThis.fetch = (...args) => fetchCompilerAsset(originalFetch, args);
     const instance = new SiglumCompiler({
       bundlesUrl: '/engine-static/tl2025/bundles',
-      wasmUrl: '/engine-static/tl2025/busytex.wasm',
+      wasmUrl: '/engine-static/tl2025/busytex.wasm.gz',
       jsUrl: '/engine-static/tl2025/busytex.js',
       workerUrl: '/dist/siglum-worker.js',
       // Siglum appends /api/texlive/<package> to this origin itself.
@@ -301,20 +317,7 @@ export const browserWorkspace = {
       // language definition files. Babel fails before Siglum's normal missing-
       // file retry can request them, so preload the German collection explicitly.
       const originalFetch = globalThis.fetch;
-      globalThis.fetch = async (...args) => {
-        const input = args[0];
-        const requestUrl = String(input?.url || input);
-        let response = await originalFetch(...args);
-        if (requestUrl.includes('/engine-static/') && response.status === 404) {
-          const fallbackUrl = requestUrl.replace('/engine-static/', '/engine/');
-          response = await originalFetch(input instanceof Request ? new Request(fallbackUrl, input) : fallbackUrl, input instanceof Request ? undefined : args[1]);
-        }
-        if ((requestUrl.includes('/engine') || requestUrl.includes('/api/texlive/')) && response.status === 429) {
-          const body = await response.clone().text().catch(() => '');
-          if (/error\s*1027|workers? free plan/i.test(body)) compilerLogs.push('[Cloudflare Error 1027] A Worker request was rate limited; static compiler assets remain available.');
-        }
-        return response;
-      };
+      globalThis.fetch = (...args) => fetchCompilerAsset(originalFetch, args);
       let result;
       try {
         if (/\\usepackage(?:\[[^\]]*\])?\s*\{[^}]*\bbabel\b[^}]*\}/i.test(source) && /\b(?:ngerman|german|naustrian|austrian|swissgerman)\b/i.test(source)) {
