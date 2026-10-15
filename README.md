@@ -147,7 +147,8 @@ and the collaboration features need the local Node.js server. See
 - Snapshots: capture all text files before a rewrite; automatic quiet backup every 20 minutes and
   always one before restoring
 - ZIP export/import and public GitHub repository import
-- Seven templates (article, thesis, beamer, report, letter, mathematics, minimal) and sample projects
+- Seven templates (article, thesis, beamer, report, letter, mathematics paper, minimal) and sample
+  projects
 - Browser workspace mode for the hosted build: projects, files, search/replace and ZIP transfer in
   IndexedDB, with in-browser compilation
 

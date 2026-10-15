@@ -215,6 +215,14 @@
       clearTimeout(flashTimer);
       syncNodes.forEach(function (node) { node.classList.toggle('sync-active', node.dataset.demoSync === key); });
       if (origin === 'source') {
+        // The page pane is a short scrollable strip in the compact layout:
+        // bring the matching block into view without moving the whole page.
+        var block = demo.querySelector('.demo-pdf-block[data-demo-sync="' + key + '"]');
+        var strip = block && block.closest('.demo-pdf');
+        if (block && strip && strip.scrollHeight > strip.clientHeight + 4) {
+          var offset = block.offsetTop - (strip.clientHeight - block.clientHeight) / 2;
+          strip.scrollTo({ top: Math.max(0, offset), behavior: reduceMotion ? 'auto' : 'smooth' });
+        }
         setHint('SyncTeX: source line jumped to the matching block on the page.');
         setStatus('SyncTeX → page 1');
       } else if (origin === 'page') {

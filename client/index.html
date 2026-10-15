@@ -73,19 +73,15 @@
             <code id="install-cmd">npm install &amp;&amp; npm start</code>
             <button class="mini-btn copy-btn" data-copy="npm install && npm start">Copy</button>
           </div>
-          <ul class="hero-facts">
-            <li><b>Runs on your machine</b><span>Your projects stay in your own folders</span></li>
-            <li><b>No account, no cloud</b><span>Nothing is uploaded or analysed</span></li>
-            <li><b>Your TeX installation</b><span>pdfLaTeX, XeLaTeX, LuaLaTeX, pLaTeX</span></li>
-          </ul>
         </div>
 
-        <div class="demo-intro">
-          <div class="eyebrow" id="demo-title">Interactive demo</div>
-          <p>No video, no screenshots — this is the real layout, built from the same components. Switch panels, flip between source and PDF, click a highlighted line for a SyncTeX jump or run a build.</p>
-        </div>
+        <div class="hero-demo">
+          <div class="demo-head">
+            <span class="eyebrow" id="demo-title">Interactive demo</span>
+            <span class="demo-note">no video, no screenshots</span>
+          </div>
 
-        <div class="demo" id="app-demo">
+          <div class="demo" id="app-demo">
           <div class="demo-chrome">
             <span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span>
             <span class="demo-title">localhost:4180/studio · latency-paper</span>
@@ -169,9 +165,16 @@
               <button data-demo-view="pdf" aria-pressed="false">PDF</button>
             </div>
             <button class="demo-build" id="demo-build">▶ Build <kbd>Ctrl+B</kbd></button>
-            <span class="demo-hint" id="demo-hint">Click a rail panel, a source line or a page block</span>
+              <span class="demo-hint" id="demo-hint">Click a rail panel, a source line or a page block</span>
+            </div>
           </div>
         </div>
+
+        <ul class="hero-facts">
+          <li><b>Runs on your machine</b><span>Projects stay in your own folders; TeX compiles with your installation (pdfLaTeX, XeLaTeX, LuaLaTeX, pLaTeX).</span></li>
+          <li><b>No account, no cloud</b><span>Nothing is uploaded or analysed, and there is no telemetry. Hosted builds compile in the browser.</span></li>
+          <li><b>Nothing gets lost</b><span>Change history, snapshots, word goals and notes are stored locally in your own browser.</span></li>
+        </ul>
       </section>
 
       <!-- ------------------------------------------- Existing local projects -->
