@@ -1,11 +1,11 @@
-/* Projectverwaltung: umbenennen, duplizieren, löschen, importieren, Demos */
+/* Project management: rename, duplicate, delete, import, demos */
 
 import { api } from './api.js';
 import { state, setProject, applyScope, emit, on, persist } from './state.js';
 import { $, $$, el, clear, toast, promptDialog, confirmDialog, contextMenu, openModal, closeModal } from './util.js';
 import { closeAllTabs, openFile, reloadFile } from './editor/index.js';
 
-/** Baut das Project-Dropdown new auf und markiert ggf. das aktive Project */
+/** Rebuilds the project dropdown and highlights the active project if needed */
 export async function reloadProjects(selectTo = state.project) {
   try {
     const app = await api.state();
@@ -28,7 +28,7 @@ function renderOptions(projects, selectTo) {
   if (selectTo) sel.value = selectTo;
 }
 
-/* ------------------------------------------------------------ Aktionen */
+/* ------------------------------------------------------------ Actions */
 
 export function projectMenu(anchor) {
   const integrations = [
@@ -47,6 +47,10 @@ export function projectMenu(anchor) {
   contextMenu(anchor.left, anchor.bottom + 4, [
     { label: 'Rename project …', icon: '✎', action: renameProject },
     { label: 'Duplicate project …', icon: '⧉', action: duplicateProject },
+    '-',
+    { label: 'Project snapshots …', icon: '💾', action: () => import('./snapshots.js').then((m) => m.openSnapshots()) },
+    { label: 'Change history …', icon: '✎', action: () => import('./history.js').then((m) => m.openHistory()) },
+    { label: 'Document statistics', icon: '👁', action: () => import('./stats.js').then((m) => m.openDocumentStats()) },
     '-',
     { label: 'Export as ZIP', icon: '⭳', action: exportProject },
     { label: 'Import ZIP …', icon: '⤓', action: importZip },
@@ -69,6 +73,7 @@ async function importGithubProject() {
     const result = await api.githubImport(url.trim(), name.trim());
     await reloadProjects(result.project);
     toast(`GitHub project imported: ${result.project} · ${result.files} files`, { type: 'ok', ms: 5000 });
+    emit('history:note', { note: 'import', label: `GitHub: ${result.project}` });
     emit('project:switch', result.project);
   } catch (error) {
     toast('GitHub import failed: ' + error.message, { type: 'err', ms: 8000 });
@@ -95,8 +100,8 @@ async function handleBibliography(file) {
     let result = await api.mergeBibliography(project, content, target);
     if (result.updateCandidates) {
       const replace = await confirmDialog(
-        'Vorhandene Citekeys aktualisieren?',
-        `${result.updateCandidates} Einträge existieren bereits. Sollen diese Einträge with den Zotero-/BibTeX-Export replaced werden? Manuelle Änderungen an genau diesen Literaturangaben werden überschrieben.`,
+        'Update existing citation keys?',
+        `${result.updateCandidates} entries already exist. Replace these entries with the Zotero / BibTeX export? Manual changes to exactly these references will be overwritten.`,
         'Update entries',
       );
       if (replace) result = await api.mergeBibliography(project, content, target, true);
@@ -109,6 +114,7 @@ async function handleBibliography(file) {
     await openFile(importedPath);
     emit('tree:refresh');
     emit('meta:refresh');
+    emit('history:note', { note: 'import', label: `Bibliography: ${result.file}` });
     toast(`Bibliography imported: ${result.added} new, ${result.updated} updated, ${result.unchanged} unchanged · ${result.file}`, { type: 'ok', ms: 7000 });
   } catch (error) {
     toast('Bibliography import failed: ' + error.message, { type: 'err', ms: 8000 });
@@ -144,7 +150,7 @@ export async function renameProject() {
 export async function duplicateProject() {
   const from = state.project;
   if (!from) return;
-  const to = await promptDialog('Project duplizieren', 'Copy name', from + ' (copy)');
+  const to = await promptDialog('Duplicate project', 'Copy name', from + ' (copy)');
   if (!to || !to.trim()) return;
   try {
     const res = await api.duplicateProject(from, to.trim());
@@ -160,9 +166,9 @@ export async function deleteProject() {
   const name = state.project;
   if (!name) return;
   const ok = await confirmDialog(
-    'Project löschen',
-    `Das Project “${name}“ samt aller files und PDFs wird in den Papierkorb verschoben und nach 30 Tagen endgültig entfernt.`,
-    'In den Papierkorb',
+    'Delete project',
+    `The project “${name}” including all files and PDFs will be moved to the trash and permanently removed after 30 days.`,
+    'Move to trash',
   );
   if (!ok) return;
   try {
@@ -191,9 +197,10 @@ export async function deleteProject() {
 export async function exportProject() {
   if (!state.project) return;
   await api.exportProject(state.project);
+  emit('history:note', { note: 'export', label: state.project });
 }
 
-/* --------------------------------------------------------- ZIP-Import */
+/* --------------------------------------------------------- ZIP import */
 
 export function importZip() {
   const input = $('#zip-upload-input');
@@ -211,13 +218,14 @@ async function handleZipFile(file) {
     const res = await api.importProject(name.trim(), buf);
     await reloadProjects(res.project);
     toast(`Imported: ${res.project} (${res.files} files)`, { type: 'ok', ms: 4000 });
+    emit('history:note', { note: 'import', label: `ZIP: ${res.project}` });
     emit('project:switch', res.project);
   } catch (e) {
     toast('Import failed: ' + e.message, { type: 'err', ms: 7000 });
   }
 }
 
-/* ------------------------------------------------------- Demo-Projecte */
+/* ------------------------------------------------------- Demo projects */
 
 export async function openDemos() {
   let demos = [];
@@ -241,7 +249,7 @@ export async function openDemos() {
         el('b', { text: d.title || d.name }),
         el('span', { text: d.description || '' }),
       ),
-      el('span', { class: 'demo-flag', text: d.exists ? 'Already added' : 'new' }),
+      el('span', { class: 'demo-flag', text: d.exists ? 'Already added' : 'New' }),
     );
     list.append(card);
   }

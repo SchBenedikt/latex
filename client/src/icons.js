@@ -13,6 +13,7 @@ const paths = {
   file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/>',
   source: '<path d="M8 5H6a2 2 0 0 0-2 2v3l-2 2 2 2v3a2 2 0 0 0 2 2h2M16 5h2a2 2 0 0 1 2 2v3l2 2-2 2v3a2 2 0 0 1-2 2h-2"/>',
   book: '<path d="M4 4h7a2 2 0 0 1 2 2v15a3 3 0 0 0-3-2H4ZM20 4h-5a2 2 0 0 0-2 2v15a3 3 0 0 1 3-2h4Z"/>',
+  bib: '<path d="M4 4h4v16H4ZM10 4h4v16h-4ZM17 5l3 15"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   keyboard: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"/>',
@@ -36,6 +37,9 @@ const paths = {
   refresh: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.3 6a8 8 0 0 1 13 2M4.7 16a8 8 0 0 0 13 2"/>',
   package: '<path d="m12 3 9 5v9l-9 5-9-5V8ZM3 8l9 5 9-5M12 13v9M7.5 5.5l9 5"/>',
   terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m6 0h4"/>',
+  check: '<path d="m4 12.5 5 5L20 6.5"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  note: '<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19Z"/><path d="m14.5 6.5 3 3"/>',
 };
 
 export function icon(name) {
@@ -63,15 +67,15 @@ export function menuIcon(value) { return icon(legacyIcons[value] || value); }
 
 export function commandIcon(command) {
   const label = command.label;
-  if (/Paket/.test(label)) return icon('package');
-  if (/speichern/.test(label)) return icon('save');
-  if (/Engine|Einstellungen/.test(label)) return icon('settings');
-  if (/aktualisieren|new laden|initialisieren|umschalten/.test(label)) return icon('refresh');
-  if (/Konsole|Konsolen/.test(label)) return icon('terminal');
-  if (/schließen|löschen/.test(label)) return icon('close');
-  if (/herunterladen|exportieren/.test(label)) return icon('download');
-  if (/duplizieren/.test(label)) return icon('copy');
-  if (/umbenennen/.test(label)) return icon('edit');
-  if (/Symbol|Umgebung/.test(label)) return icon('symbols');
-  return icon(({ Build: 'play', files: 'file', Project: 'folder', 'Navigation & Search': 'search', View: 'eye' })[command.grp] || 'file');
+  if (/Package/.test(label)) return icon('package');
+  if (/Save|save/.test(label)) return icon('save');
+  if (/Engine|Settings/.test(label)) return icon('settings');
+  if (/Refresh|Reload|Reinitialize|Toggle|refresh|reload/.test(label)) return icon('refresh');
+  if (/Console|console/.test(label)) return icon('terminal');
+  if (/Close|Delete|close|delete/.test(label)) return icon('close');
+  if (/Download|Export|download|export/.test(label)) return icon('download');
+  if (/Duplicate|duplicate/.test(label)) return icon('copy');
+  if (/Rename|rename/.test(label)) return icon('edit');
+  if (/Symbol|Environment|symbol|environment/.test(label)) return icon('symbols');
+  return icon(({ Build: 'play', Files: 'file', Project: 'folder', 'Navigation & Search': 'search', View: 'eye', Insert: 'plus', Document: 'file' })[command.grp] || 'file');
 }

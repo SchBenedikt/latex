@@ -1,6 +1,6 @@
 {
   "name": "latex-studio",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "private": true,
   "description": "A local-first LaTeX workspace with live PDF preview, SyncTeX, package diagnostics, and project tools",
   "repository": {

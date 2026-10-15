@@ -1,4 +1,4 @@
-/* Filebaum: Navigation, CRUD, Upload, Kontextmenü */
+/* File tree: navigation, CRUD, upload, context menu */
 
 import { api } from './api.js';
 import { state, on, emit, setSettings, persist, projectRelPath } from './state.js';
@@ -133,7 +133,7 @@ function showMenu(x, y, node) {
   ]);
 }
 
-/* ------------------------------------------------------------ Aktionen */
+/* ------------------------------------------------------------ Actions */
 
 export async function newFile(dir = '') {
   const name = await promptDialog('New file', 'File name (including extension)', '', 'chapter3.tex');
@@ -164,7 +164,7 @@ export async function newFolder(dir = '') {
 }
 
 async function rename(node) {
-  const name = await promptDialog('Rename', 'Neuer Name', node.name);
+  const name = await promptDialog('Rename', 'New name', node.name);
   if (!name || name === node.name) return;
   const parent = node.path.includes('/') ? node.path.slice(0, node.path.lastIndexOf('/')) : '';
   const to = (parent ? parent + '/' : '') + name.trim();
@@ -207,7 +207,7 @@ export async function uploadFiles(fileList, dir = '') {
     try {
       const buf = await file.arrayBuffer();
       await api.saveBinary(path, buf);
-      toast(`Hochgeladen: ${name} (${fmtBytes(file.size)})`, { type: 'ok' });
+      toast(`Uploaded: ${name} (${fmtBytes(file.size)})`, { type: 'ok' });
     } catch (e) {
       toast(`Upload failed (${name}): ${e.message}`, { type: 'err' });
     }
@@ -216,7 +216,7 @@ export async function uploadFiles(fileList, dir = '') {
   emit('tree:refresh');
 }
 
-/* ------------------------------------------------------------- Globale */
+/* ------------------------------------------------------------- Global */
 
 export function initTree() {
   $('#btn-new-file').addEventListener('click', () => newFile(selectedIsDir() ? selected : ''));
@@ -240,7 +240,7 @@ export function initTree() {
     }
   });
 
-  // Ganzes Project per Drag & Drop hochladen
+  // Upload an entire project via drag & drop
   treeEl.addEventListener('dragover', (e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); });
   treeEl.addEventListener('drop', async (e) => {
     if (e.dataTransfer.files?.length) {

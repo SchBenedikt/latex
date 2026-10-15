@@ -1,12 +1,12 @@
-/* Tastatur-Spezialitäten für LaTeX: automatisches \end schließen */
+/* Keyboard specialties for LaTeX: automatic \end closing */
 
 import { EditorView } from '@codemirror/view';
 import { escapeRe } from './language.js';
 
 /**
- * Tippt der Nutzer `}` zum Close of `\begin{xyz}` (die schließende
- * Klammer wurde of closeBrackets automatisch gesetzt), werden automatisch
- * Zeilenumbruch, Einrückung und `\end{xyz}` erzeugt.
+ * When the user types `}` to close `\begin{xyz}` (the closing
+ * brace was added by closeBrackets automatically), a line break,
+ * indentation, and `\end{xyz}` are automatically generated.
  */
 export function envCloseHandler(getTabSize) {
   return EditorView.domEventHandlers({

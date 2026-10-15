@@ -1,4 +1,4 @@
-/* PDF-Vorschau mit pdf.js: Rendern, Zoom, Suche, SyncTeX */
+/* PDF preview with pdf.js: rendering, zoom, search, SyncTeX */
 
 import * as pdfjsLib from 'pdfjs-dist';
 import { api } from './api.js';
@@ -21,7 +21,7 @@ let current = 1;
 let baseViewport = null;   // Page 1 bei Scale 1
 let textLayerPromises = new Map();
 
-/* ------------------------------------------------------------- Laden */
+/* ------------------------------------------------------------- Loading */
 
 export async function loadPdf(url, { keepScroll = false } = {}) {
   const token = ++loadToken;
@@ -57,7 +57,7 @@ export async function loadPdf(url, { keepScroll = false } = {}) {
     for (let n = 1; n <= pdfDoc.numPages; n++) pagesEl.append(createPage(n));
     applyScale(computeScale());
 
-    // Seiten asynchron rendern (zuerst sichtbare)
+    // Render pages asynchronously (visible ones first)
     for (let n = 1; n <= pdfDoc.numPages; n++) {
       if (token !== loadToken) return;
       await renderPage(n, token);
@@ -160,7 +160,7 @@ async function renderPageContent(num, token) {
   if (token !== loadToken) return;
   pv.renderedScale = scale;
 
-  // Text-Ebene
+  // Text layer
   try {
     clear(pv.textLayer);
     const textContent = await page.getTextContent();
@@ -174,31 +174,41 @@ async function renderPageContent(num, token) {
   } catch (e) { console.warn('TextLayer', e); }
 }
 
-/* ------------------------------------------------------------- Steuerung */
+/* ------------------------------------------------------------- Controls */
 
 export function setZoom(value) {
+  const sel = $('#pdf-zoom');
   if (value === 'fit-width' || value === 'fit-page') {
     fitMode = value;
     state.settings.pdfZoom = value;
-    $('#pdf-zoom').value = value;
+    [...sel.options].find((o) => o.dataset.custom === '1')?.remove();
+    sel.value = value;
     reRender();
   } else {
     fitMode = 'custom';
-    manualScale = Number(value) || 1;
-    $('#pdf-zoom').value = String(value);
+    manualScale = Math.max(0.2, Math.min(5, Number(value) || 1));
+    setCustomZoomOption(manualScale);
     reRender();
   }
 }
 
+/** Keeps the zoom select honest: custom scales show their real percentage. */
+function setCustomZoomOption(scale) {
+  const sel = $('#pdf-zoom');
+  let opt = [...sel.options].find((o) => o.dataset.custom === '1');
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.dataset.custom = '1';
+    sel.append(opt);
+  }
+  opt.value = String(scale);
+  opt.textContent = `${Math.round(scale * 100)}%`;
+  sel.value = String(scale);
+}
+
 export function zoomBy(factor) {
   const cur = pdfDoc ? pageViews[0]?.viewport.scale || 1 : 1;
-  fitMode = 'custom';
-  manualScale = Math.max(0.2, Math.min(5, cur * factor));
-  const sel = $('#pdf-zoom');
-  const opt = [...sel.options].find((o) => o.value === String(manualScale));
-  sel.value = opt ? opt.value : '';
-  if (!opt) sel.selectedIndex = 0;
-  reRender();
+  setZoom(String(Math.max(0.2, Math.min(5, cur * factor))));
 }
 
 const reRender = debounce(async () => {
@@ -245,7 +255,7 @@ function updatePageChip() {
   chip.textContent = `${current} / ${total}`;
 }
 
-/* ------------------------------------------------------- Seitenverfolgung */
+/* ------------------------------------------------------- Page tracking */
 
 const io = new IntersectionObserver((entries) => {
   let best = null;
@@ -256,7 +266,7 @@ const io = new IntersectionObserver((entries) => {
     }
   }
   if (best != null && Math.abs(best - current) >= 1) {
-    // nur übernehmen, wenn die Seite wirklich dominanti sichtbar ist
+    // only adopt when the page is truly dominantly visible
     setCurrentPage(best);
   }
 }, { root: viewerEl, threshold: 0.35 });
@@ -287,7 +297,7 @@ function onPdfClick(e, page, div) {
   const rect = div.getBoundingClientRect();
   const [pdfX, pdfY] = vp.convertToPdfPoint(e.clientX - rect.left, e.clientY - rect.top);
   const pageHeight = baseViewport?.viewBox?.[3] || vp.height;
-  // synctex erwartet y mit Ursprung oben
+  // synctex expects y with origin at the top
   const yTop = pageHeight - pdfY;
 
   api.synctex(state.project, {
@@ -301,7 +311,7 @@ function onPdfClick(e, page, div) {
     const r = res.result;
     const file = r.file || state.settings.mainFile;
     if (String(file).startsWith('/')) {
-      flash('Quelldatei liegt außerhalb des Projects');
+      flash('Source file is outside the project');
       return;
     }
     openFile(file, { line: r.line, col: r.column || 1 });
@@ -309,7 +319,7 @@ function onPdfClick(e, page, div) {
   }).catch((err) => flash('SyncTeX: ' + err.message));
 }
 
-/** Vorwärts-Sprung: Zeile → PDF-Rechteck markieren */
+/** Forward jump: line → highlight PDF rectangle */
 export async function forwardSync(line, file) {
   if (!pdfDoc || !state.project) return false;
   try {
@@ -330,8 +340,8 @@ export async function forwardSync(line, file) {
     const pageHeight = baseViewport?.viewBox?.[3] || vp.height;
     const h = r.h ?? r.x;
     const v = r.v ?? r.y;
-    if (h == null || v == null) { flash('SyncTeX ohne Koordinaten'); return false; }
-    // h/v sind Koordinaten mit Ursprung oben-links → in PDF-Koordinaten umrechnen
+    if (h == null || v == null) { flash('SyncTeX without coordinates'); return false; }
+    // h/v are coordinates with origin at top-left → convert to PDF coordinates
     const [vx, vy] = vp.convertToViewportPoint(h, pageHeight - v);
     const box = el('div', {
       class: 'sync-highlight',
@@ -344,7 +354,7 @@ export async function forwardSync(line, file) {
     });
     pv.div.append(box);
     setTimeout(() => { box.style.opacity = '0'; setTimeout(() => box.remove(), 500); }, 3200);
-    flash(`Seite ${r.page} (SyncTeX)`);
+    flash(`Page ${r.page} (SyncTeX)`);
     return true;
   } catch (e) {
     flash('SyncTeX: ' + e.message);
@@ -352,7 +362,7 @@ export async function forwardSync(line, file) {
   }
 }
 
-/** wartet, bis die Seite gerendert wurde (Text-Ebene vorhanden) */
+/** waits until the page has rendered (text layer present) */
 async function ensureRendered(page) {
   const pv = pageViews[page - 1];
   if (!pv || pv.renderedScale === (pv.scale || 1)) return;
@@ -360,7 +370,7 @@ async function ensureRendered(page) {
   await renderPage(page, token);
 }
 
-/* ---------------------------------------------------------- PDF-Suche */
+/* ---------------------------------------------------------- PDF search */
 
 let searchHits = [];
 let searchIndex = -1;
@@ -382,7 +392,7 @@ export async function searchInPdf(query) {
     });
   }
   if (searchHits.length) {
-    $('#pdf-search-info').textContent = `${searchHits.length} Treffer`;
+    $('#pdf-search-info').textContent = `${searchHits.length} matches`;
     nextSearchHit(1);
   } else {
     $('#pdf-search-info').textContent = 'No matches';
@@ -412,7 +422,7 @@ export function clearSearch() {
   searchIndex = -1;
 }
 
-/* ------------------------------------------------------------- Aktionen */
+/* ------------------------------------------------------------- Actions */
 
 export function openPdfInTab() {
   const pdf = state.pdf;

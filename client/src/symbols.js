@@ -1,4 +1,4 @@
-/* Symbolpalette: Kategorien + Suche, Insert per Klick */
+/* Symbol palette: categories + search, insert on click */
 
 import { SYMBOLS } from './editor/catalog.js';
 import { $, el, clear, debounce } from './util.js';
@@ -7,10 +7,10 @@ import { insertText, insertSnippet, focusEditor } from './editor/index.js';
 const catsEl = $('#symbol-cats');
 const gridEl = $('#symbol-grid');
 const filterEl = $('#symbol-filter');
-let activeCat = 'Alle';
+let activeCat = 'All';
 
 export function initSymbols() {
-  const cats = ['Alle', ...SYMBOLS.map((s) => s.cat)];
+  const cats = ['All', ...SYMBOLS.map((s) => s.cat)];
   clear(catsEl);
   for (const c of cats) {
     catsEl.append(el('button', {
@@ -26,12 +26,12 @@ function renderGrid(filter) {
   clear(gridEl);
   const f = filter.trim().toLowerCase();
   for (const group of SYMBOLS) {
-    if (activeCat !== 'Alle' && group.cat !== activeCat) continue;
+    if (activeCat !== 'All' && group.cat !== activeCat) continue;
     for (const [display, latex] of group.items) {
       if (f && !display.toLowerCase().includes(f) && !latex.toLowerCase().includes(f)) continue;
       gridEl.append(el('button', {
         class: 'sym',
-        title: `${latex}  (${display}) – klicken zum Insert`,
+        title: `${latex}  (${display}) – click to insert`,
         onclick: () => {
           if (latex.includes('\n')) insertSnippet(latex);
           else insertText(latex);

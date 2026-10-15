@@ -1,4 +1,4 @@
-/* Editor-Verwaltung: Tabs, Dokumente, Save, Sprünge, Snippets */
+/* Editor management: Tabs, Documents, Save, Jumps, Snippets */
 
 import {
   EditorState, StateField, StateEffect, Compartment, EditorSelection,
@@ -18,12 +18,13 @@ import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/sea
 import { latexLanguage, latexHighlighting, latexIndent, latexFolding } from './language.js';
 import { latexCompletion, inMath } from './completion.js';
 import { envCloseHandler } from './keys.js';
+import { toggleLineComment, wrapSelection } from './format.js';
 import { api } from '../api.js';
 import { state, docOf, addTab, removeTab, setActive, tabPath, persist, emit, projPath, projectRelPath } from '../state.js';
 import { el, clear, basename, debounce, toast, confirmDialog, contextMenu } from '../util.js';
 import { icon, fileIcon } from '../icons.js';
 
-/* --------------------------------------------------- Sync-Zeilen-Markierung */
+/* --------------------------------------------------- Sync line highlight */
 
 const setSyncLine = StateEffect.define();
 
@@ -53,6 +54,12 @@ const phComp = new Compartment();
 
 const host = document.getElementById('editor-host');
 export const editorView = new EditorView({ parent: host });
+
+/* CodeMirror also matches unshifted bindings like "Mod-g" for Ctrl+Shift+G,
+ * so shifted shortcuts need the real shift state. Capturing it on the editor
+ * host runs before any keymap handler. */
+let shiftPressed = false;
+host.addEventListener('keydown', (e) => { shiftPressed = e.shiftKey; }, true);
 
 const docStates = new Map();   // path -> EditorState
 let activePath = null;
@@ -94,7 +101,27 @@ function baseExtensions() {
     indentComp.of(indentUnit.of(' '.repeat(s.tabSize))),
     tabComp.of(EditorState.tabSize.of(s.tabSize)),
     keymap.of([
-      { key: 'Mod-g', preventDefault: true, run: () => { emit('cmd:goto-line'); return true; } },
+      // Custom bindings come first so they win over library defaults.
+      // Shifted shortcuts dispatch on the captured shift state because
+      // CodeMirror matches "Mod-g" for Ctrl+Shift+G as well.
+      { key: 'Mod-s', preventDefault: true, run: () => { if (shiftPressed) saveAll(); else saveActive(true); return true; } },
+      { key: 'Mod-p', preventDefault: true, run: () => { emit(shiftPressed ? 'cmd:palette' : 'cmd:quickopen'); return true; } },
+      { key: 'Mod-g', preventDefault: true, run: () => { emit(shiftPressed ? 'cmd:sync-preview' : 'cmd:goto-line'); return true; } },
+      { key: 'Mod-f', run: () => { if (!shiftPressed) return false; emit('cmd:search'); return true; } },
+      { key: 'Mod-l', run: () => { if (!shiftPressed) return false; emit('cmd:sync-here'); return true; } },
+      { key: 'Mod-Shift-o', preventDefault: true, run: () => { emit('cmd:outline'); return true; } },
+      { key: 'Mod-b', preventDefault: true, run: () => { emit('cmd:build'); return true; } },
+      { key: 'F5', preventDefault: true, run: () => { emit('cmd:build'); return true; } },
+      { key: 'Mod-e', preventDefault: true, run: () => { emit('cmd:environment'); return true; } },
+      { key: 'F1', preventDefault: true, run: () => { emit('cmd:shortcuts'); return true; } },
+      { key: 'Mod-j', preventDefault: true, run: () => { emit('cmd:console'); return true; } },
+      { key: 'Mod-k', preventDefault: true, run: () => { emit('cmd:palette'); return true; } },
+      { key: 'Mod-/', preventDefault: true, run: (view) => toggleLineComment(view) },
+      { key: 'Alt-Shift-b', preventDefault: true, run: (view) => wrapSelection(view, 'textbf') },
+      { key: 'Alt-Shift-i', preventDefault: true, run: (view) => wrapSelection(view, 'textit') },
+      { key: 'Alt-Shift-e', preventDefault: true, run: (view) => wrapSelection(view, 'emph') },
+      { key: 'Alt-Shift-u', preventDefault: true, run: (view) => wrapSelection(view, 'underline') },
+      { key: 'Alt-Shift-m', preventDefault: true, run: (view) => wrapSelection(view, 'math') },
       ...closeBracketsKeymap,
       ...completionKeymap,
       ...searchKeymap,
@@ -102,19 +129,6 @@ function baseExtensions() {
       ...foldKeymap,
       ...defaultKeymap,
       indentWithTab,
-      { key: 'Mod-s', preventDefault: true, run: () => { saveActive(true); return true; } },
-      { key: 'Mod-b', preventDefault: true, run: () => { emit('cmd:build'); return true; } },
-      { key: 'F5', preventDefault: true, run: () => { emit('cmd:build'); return true; } },
-      { key: 'Mod-e', preventDefault: true, run: () => { emit('cmd:environment'); return true; } },
-      { key: 'Mod-Shift-g', preventDefault: true, run: () => { emit('cmd:sync-preview'); return true; } },
-      { key: 'Mod-Shift-l', preventDefault: true, run: () => { emit('cmd:sync-here'); return true; } },
-      { key: 'Mod-p', preventDefault: true, run: () => { emit('cmd:quickopen'); return true; } },
-      { key: 'Mod-Shift-p', preventDefault: true, run: () => { emit('cmd:palette'); return true; } },
-      { key: 'F1', preventDefault: true, run: () => { emit('cmd:shortcuts'); return true; } },
-      { key: 'Mod-j', preventDefault: true, run: () => { emit('cmd:console'); return true; } },
-      { key: 'Mod-Shift-f', preventDefault: true, run: () => { emit('cmd:search'); return true; } },
-      { key: 'Mod-Shift-o', preventDefault: true, run: () => { emit('cmd:outline'); return true; } },
-      { key: 'Mod-k', preventDefault: true, run: () => { emit('cmd:palette'); return true; } },
     ]),
     EditorView.updateListener.of((update) => {
       if (update.docChanged && activePath) {
@@ -152,7 +166,7 @@ function saveDocument(path, manual = false) {
       doc.saved = doc.content === content;
       renderTabs();
       if (doc.saved) emit('saved', path);
-      emit('file-saved', path);
+      emit('file-saved', { path, content });
       if (manual && doc.saved) toast('Saved: ' + basename(path), { type: 'ok', ms: 1500 });
       return doc.saved;
     } catch (e) {
@@ -188,7 +202,7 @@ export function anyDirty() {
   return [...state.docs.values()].some((d) => !d.saved);
 }
 
-/** Lädt eine File new vom Server (z. B. nach projektweiter Ersetzung) */
+/** Reloads a file from the server (e.g., after project-wide replacement) */
 export async function reloadFile(path) {
   path = projPath(path);
   const doc = state.docs.get(path);
@@ -209,7 +223,7 @@ export async function reloadFile(path) {
   docStates.set(path, next);
   if (activePath === path) editorView.setState(next);
   renderTabs();
-  emit('file-saved', path);
+  emit('file-saved', { path, content: res.content });
   return true;
 }
 
@@ -285,7 +299,7 @@ function doClose(path) {
   emit('tabs', state.tabs);
 }
 
-/* ------------------------------------------------------------- Sprünge */
+/* ------------------------------------------------------------- Jumps */
 
 export function gotoLine(line, col = 1, flashMs = 1800) {
   const doc = editorView.state.doc;
@@ -412,7 +426,7 @@ export function renderTabs() {
     const tab = el('div', {
       class: 'tab' + (isActive ? ' active' : ''),
       role: 'tab', 'aria-selected': String(isActive), tabindex: isActive ? 0 : -1,
-      title: t.path + (dirty ? ' (ungespeichert)' : ''),
+      title: t.path + (dirty ? ' (unsaved)' : ''),
       onkeydown: (e) => {
         if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFile(t.path); }
@@ -428,11 +442,11 @@ export function renderTabs() {
       oncontextmenu: (e) => {
         e.preventDefault();
         contextMenu(e.clientX, e.clientY, [
-          { label: 'Save', icon: '💾', action: () => { if (activePath === t.path) saveActive(true); else toast('Save Sie den aktiven Tab', { type: 'warn' }); } },
+          { label: 'Save', icon: '💾', action: () => { if (activePath === t.path) saveActive(true); else toast('Save the active tab', { type: 'warn' }); } },
           { label: 'Close', icon: '✕', action: () => closeTab(t.path) },
           { label: 'Close all others', icon: '✕', action: () => { for (const o of [...state.tabs]) if (o.path !== t.path) closeTab(o.path, true); } },
           '-',
-          { label: 'Pfad kopieren', icon: '⧉', action: () => navigator.clipboard.writeText(t.path).then(() => toast('Path copied', { type: 'ok', ms: 1200 })) },
+          { label: 'Copy path', icon: '⧉', action: () => navigator.clipboard.writeText(t.path).then(() => toast('Path copied', { type: 'ok', ms: 1200 })) },
         ]);
       },
     },
@@ -440,7 +454,7 @@ export function renderTabs() {
       el('span', { class: 'tname', text: t.name }),
       dirty ? el('span', { class: 'tdirty', title: 'Unsaved' }) : null,
       el('button', {
-        class: 'tclose', html: icon('close'), title: 'Close', 'aria-label': t.name + ' schließen',
+        class: 'tclose', html: icon('close'), title: 'Close', 'aria-label': t.name + ' Close',
         onclick: (e) => { e.stopPropagation(); closeTab(t.path); },
       }),
     );
@@ -487,7 +501,7 @@ function renderBreadcrumb() {
     bar.append(mk(
       parts[i],
       isLast ? 'bc-current' : 'bc-dir',
-      isLast ? ws : `Im Baum show: ${ws}`,
+      isLast ? ws : `Show in tree: ${ws}`,
       isLast ? null : () => {
         showFilesPanel();
         import('../tree.js').then((m) => m.revealPath(ws));
@@ -496,7 +510,7 @@ function renderBreadcrumb() {
   }
 }
 
-/* -------------------------------------------------------- Einstellungen */
+/* -------------------------------------------------------- Settings */
 
 export function applyEditorSettings(patch = {}) {
   const s = state.settings;
@@ -511,7 +525,7 @@ export function applyEditorSettings(patch = {}) {
   if (effects.length) {
     try { editorView.dispatch({ effects }); } catch (e) { console.warn(e); }
   }
-  document.getElementById('st-indent').textContent = `${s.tabSize} Leerzeichen`;
+  document.getElementById('st-indent').textContent = `${s.tabSize} spaces`;
 }
 
 export function reconfigureAllEditors() {

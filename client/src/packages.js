@@ -1,4 +1,4 @@
-/* Paketstatus des aktiven LaTeX-Projects und gezielte Reparatur fehlender Pakete. */
+/* Package status for the active LaTeX project and targeted repair of missing packages. */
 
 import { api } from './api.js';
 import { state } from './state.js';
@@ -41,7 +41,7 @@ function renderPackages() {
   const ready = all.filter((item) => item.installed).length;
   const missing = all.length - ready;
   const managerLabel = packageData?.manager === 'tlmgr' ? 'TeX Live' : packageData?.manager === 'miktex' ? 'MiKTeX' : null;
-  $('#package-summary').textContent = `${all.length} gefunden · ${ready} verfügbar · ${missing} fehlen${managerLabel ? ` · ${managerLabel}` : ''}`;
+  $('#package-summary').textContent = `${all.length} found · ${ready} available · ${missing} missing${managerLabel ? ` · ${managerLabel}` : ''}`;
   const installAll = $('#package-install-missing');
   installAll.hidden = !packageData?.packageManagerAvailable || missing === 0;
   installAll.disabled = pending.has('@all');

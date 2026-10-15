@@ -1,4 +1,4 @@
-/* LaTeX-Sprachdefinition: Tokenizer, Highlighting, Faltung, Einrückung */
+/* LaTeX language definition: Tokenizer, Highlighting, Folding, Indentation */
 
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, foldService, indentService } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
@@ -49,13 +49,13 @@ const latexParser = {
 
     const ch = stream.peek();
 
-    /* Kommentar (nicht escaptes %) */
+    /* Comment (non-escaped %) */
     if (ch === '%' && !isEscaped(stream)) {
       stream.skipToEnd();
       return 'comment';
     }
 
-    /* --------------------------------------------------------- Math-Modus */
+    /* --------------------------------------------------------- Math mode */
     if (state.mode === 'math') {
       if (ch === '\\') {
         const next = stream.string.charAt(stream.pos + 1);
@@ -85,7 +85,7 @@ const latexParser = {
       return 'operator.special';
     }
 
-    /* Math-Start */
+    /* Math start */
     if (ch === '$' && !isEscaped(stream)) {
       stream.next();
       if (stream.peek() === '$') stream.next();
@@ -101,7 +101,7 @@ const latexParser = {
       return 'operator.special';
     }
 
-    /* ---------------------------------------------------------- Befehle */
+    /* ---------------------------------------------------------- Commands */
     if (ch === '\\') {
       stream.next();
       if (stream.match(/^[a-zA-Z@]+/)) {
@@ -198,7 +198,7 @@ export const latexHighlighting = syntaxHighlighting(HighlightStyle.define([
   { tag: tags.invalid, class: 'tok-error' },
 ]));
 
-/* ------------------------------------------------------------ Einrückung */
+/* ------------------------------------------------------------ Indentation */
 
 const BEGIN_RE = /\\begin\s*\{/g;
 const END_RE = /\\end\s*\{/g;
@@ -229,7 +229,7 @@ export function latexIndent(tabSize = 2) {
   });
 }
 
-/* --------------------------------------------------------------- Faltung */
+/* --------------------------------------------------------------- Folding */
 
 export function latexFolding() {
   return foldService.of((state, lineStart, lineEnd) => {

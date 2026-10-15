@@ -1,4 +1,4 @@
-/* Command palette, quick open, Tastenkürzel-Übersicht */
+/* Command palette, quick open, shortcut overview */
 
 import { $, $$, el, clear, modal, openModal, closeModal, fuzzy, fuzzyHighlight, promptDialog, toast, basename, dirname } from './util.js';
 import { state, emit, on, setSettings, setProject } from './state.js';
@@ -8,7 +8,7 @@ import {
   focusEditor, gotoLine, currentLine, reconfigureAllEditors, closeAllTabs,
 } from './editor/index.js';
 import { buildProject, showBottom, toggleBottom, clearConsole, refreshMeta } from './build.js';
-import { setZoom, gotoPage, openPdfInTab, downloadPdf, forwardSync, hasPdf } from './preview.js';
+import { setZoom, zoomBy, gotoPage, openPdfInTab, downloadPdf, forwardSync, hasPdf } from './preview.js';
 import { activatePanel } from './search.js';
 import { newFile, newFolder, refreshTree } from './tree.js';
 import { applyEditorSettings } from './editor/index.js';
@@ -27,24 +27,24 @@ export function commands() {
     /* Build */
     { grp: 'Build', ico: '', label: 'Build project', key: 'Ctrl+B', run: () => buildProject() },
     { grp: 'Build', ico: '', label: 'Check and manage LaTeX packages', key: '', run: openPackageManager },
-    { grp: 'Build', ico: '', label: 'Auto-Build umschalten', key: '', run: () => setSettings({ autoBuild: S.autoBuild === 'on' ? 'off' : 'on' }) },
-    { grp: 'Build', ico: '', label: 'Engine wechseln: pdfLaTeX', key: '', run: () => switchEngine('pdflatex') },
-    { grp: 'Build', ico: '', label: 'Engine wechseln: XeLaTeX', key: '', run: () => switchEngine('xelatex') },
-    { grp: 'Build', ico: '', label: 'Engine wechseln: LuaLaTeX', key: '', run: () => switchEngine('lualatex') },
-    { grp: 'Build', ico: '', label: 'Metadaten new laden (Labels, Zitate)', key: '', run: refreshMeta },
-    { grp: 'Build', ico: '', label: 'Consoleninhalt leeren', key: '', run: clearConsole },
-    { grp: 'Build', ico: '', label: 'Editor new initialisieren (Settings anwenden)', key: '', run: reconfigureAllEditors },
+    { grp: 'Build', ico: '', label: 'Toggle auto build', key: '', run: () => setSettings({ autoBuild: S.autoBuild === 'on' ? 'off' : 'on' }) },
+    { grp: 'Build', ico: '', label: 'Switch engine: pdfLaTeX', key: '', run: () => switchEngine('pdflatex') },
+    { grp: 'Build', ico: '', label: 'Switch engine: XeLaTeX', key: '', run: () => switchEngine('xelatex') },
+    { grp: 'Build', ico: '', label: 'Switch engine: LuaLaTeX', key: '', run: () => switchEngine('lualatex') },
+    { grp: 'Build', ico: '', label: 'Reload metadata (labels, citations)', key: '', run: refreshMeta },
+    { grp: 'Build', ico: '', label: 'Clear console', key: '', run: clearConsole },
+    { grp: 'Build', ico: '', label: 'Reinitialize editor (apply settings)', key: '', run: reconfigureAllEditors },
 
-    /* files */
-    { grp: 'files', ico: '', label: 'Aktive File speichern', key: 'Ctrl+S', run: () => saveActive(true) },
-    { grp: 'files', ico: '', label: 'Alle files speichern', key: 'Ctrl+Shift+S', run: saveAll },
-    { grp: 'files', ico: '', label: 'Open file', key: 'Ctrl+P', run: () => emit('cmd:quickopen') },
-    { grp: 'files', ico: '', label: 'New file', key: '', run: () => newFile('') },
-    { grp: 'files', ico: '', label: 'New folder', key: '', run: () => newFolder('') },
-    { grp: 'files', ico: '', label: 'Filebaum aktualisieren', key: '', run: refreshTree },
-    { grp: 'files', ico: '', label: 'Go to line …', key: 'Ctrl+G', run: gotoLinePrompt },
-    { grp: 'files', ico: '', label: 'Close tab', key: 'Ctrl+F4', run: () => currentPath() && closeTab(currentPath()) },
-    { grp: 'files', ico: '', label: 'Alle Tabs schließen', key: '', run: closeAllTabs },
+    /* Files */
+    { grp: 'Files', ico: '', label: 'Save active file', key: 'Ctrl+S', run: () => saveActive(true) },
+    { grp: 'Files', ico: '', label: 'Save all files', key: 'Ctrl+Shift+S', run: saveAll },
+    { grp: 'Files', ico: '', label: 'Open file', key: 'Ctrl+P', run: () => emit('cmd:quickopen') },
+    { grp: 'Files', ico: '', label: 'New file', key: '', run: () => newFile('') },
+    { grp: 'Files', ico: '', label: 'New folder', key: '', run: () => newFolder('') },
+    { grp: 'Files', ico: '', label: 'Refresh file tree', key: '', run: refreshTree },
+    { grp: 'Files', ico: '', label: 'Go to line …', key: 'Ctrl+G', run: gotoLinePrompt },
+    { grp: 'Files', ico: '', label: 'Close tab', key: 'Ctrl+F4', run: () => currentPath() && closeTab(currentPath()) },
+    { grp: 'Files', ico: '', label: 'Close all tabs', key: '', run: closeAllTabs },
 
     /* Project */
     { grp: 'Project', ico: '', label: 'New project …', key: '', run: () => emit('cmd:new-project') },
@@ -57,7 +57,7 @@ export function commands() {
 
     /* Navigation & Search */
     { grp: 'Navigation & Search', ico: '', label: 'Project search', key: 'Ctrl+Shift+F', run: () => { activatePanel('search'); $('#search-input').focus(); } },
-    { grp: 'Navigation & Search', ico: '', label: 'Projectweit ersetzen …', key: '', run: () => emit('cmd:replace'), when: () => !!state.project },
+    { grp: 'Navigation & Search', ico: '', label: 'Replace across project …', key: '', run: () => emit('cmd:replace'), when: () => !!state.project },
     { grp: 'Navigation & Search', ico: '', label: 'Show outline', key: 'Ctrl+Shift+O', run: () => activatePanel('outline') },
     { grp: 'Navigation & Search', ico: '', label: 'Preview current line', key: 'Ctrl+Shift+G', run: () => forwardSync(currentLine().line, currentPath()) },
     { grp: 'Navigation & Search', ico: '', label: 'Source at PDF position (SyncTeX)', key: 'Ctrl+Shift+L', run: () => emit('cmd:sync-here') },
@@ -66,20 +66,52 @@ export function commands() {
     /* Insert */
     { grp: 'Insert', ico: 'λ', label: 'Insert environment …', key: 'Ctrl+E', run: insertEnvironmentPalette },
     { grp: 'Insert', ico: 'Ω', label: 'Open symbol palette', key: '', run: () => activatePanel('symbols') },
+    { grp: 'Insert', ico: '', label: 'Insert table …', key: '', run: () => import('./insert.js').then((m) => m.insertTableWizard()) },
+    { grp: 'Insert', ico: '', label: 'Insert figure …', key: '', run: () => import('./insert.js').then((m) => m.insertFigureWizard()) },
+    { grp: 'Insert', ico: '', label: 'Insert math …', key: '', run: () => import('./insert.js').then((m) => m.insertEquationWizard()) },
+    { grp: 'Insert', ico: '', label: 'Insert list …', key: '', run: () => import('./insert.js').then((m) => m.insertListWizard()) },
+    { grp: 'Insert', ico: '', label: 'Insert citation …', key: '', run: () => import('./insert.js').then((m) => m.insertCitationWizard()) },
+    { grp: 'Insert', ico: '', label: 'Insert TODO note', key: '', run: () => import('./insert.js').then((m) => m.insertTodoNote()) },
+    { grp: 'Insert', ico: '', label: 'Text: bold (\\textbf)', key: 'Alt+Shift+B', run: () => styleSelection('textbf') },
+    { grp: 'Insert', ico: '', label: 'Text: italic (\\textit)', key: 'Alt+Shift+I', run: () => styleSelection('textit') },
+    { grp: 'Insert', ico: '', label: 'Text: emphasis (\\emph)', key: 'Alt+Shift+E', run: () => styleSelection('emph') },
+    { grp: 'Insert', ico: '', label: 'Text: underline (\\underline)', key: 'Alt+Shift+U', run: () => styleSelection('underline') },
+    { grp: 'Insert', ico: '', label: 'Math: inline ($ … $)', key: 'Alt+Shift+M', run: () => styleSelection('math') },
+
+    /* Document */
+    { grp: 'Document', ico: '', label: 'Show document statistics', key: '', run: () => import('./stats.js').then((m) => m.openDocumentStats()) },
+    { grp: 'Document', ico: '', label: 'Research: goals, tasks, notes', key: 'Alt+T', run: () => import('./research.js').then((m) => m.openResearch()) },
+    { grp: 'Document', ico: '', label: 'Research: set word goal', key: '', run: () => import('./research.js').then((m) => m.setGoalDialog()) },
+    { grp: 'Document', ico: '', label: 'Research: refresh TODO tasks', key: '', run: () => import('./research.js').then((m) => m.refreshTasks()) },
+    { grp: 'Document', ico: '', label: 'Bibliography: entries, citations, missing keys', key: 'Alt+B', run: () => activatePanel('bibliography') },
+    { grp: 'Document', ico: '', label: 'Bibliography: rescan citations', key: '', run: () => import('./bibliography.js').then((m) => m.refreshBibliography()) },
+    { grp: 'Document', ico: '', label: 'Show change history', key: '', run: () => import('./history.js').then((m) => m.openHistory()) },
+    { grp: 'Document', ico: '', label: 'Edit document metadata …', key: '', run: () => import('./metadata.js').then((m) => m.openMetadata()) },
+    { grp: 'Document', ico: '', label: 'Create snapshot …', key: '', run: () => import('./snapshots.js').then((m) => m.createSnapshot()) },
+    { grp: 'Document', ico: '', label: 'Snapshots …', key: '', run: () => import('./snapshots.js').then((m) => m.openSnapshots()) },
 
     /* View */
     { grp: 'View', ico: '', label: 'Toggle console', key: 'Ctrl+J', run: toggleBottom },
+    { grp: 'View', ico: '', label: 'Toggle focus mode', key: 'Alt+Z', run: () => import('./zen.js').then((m) => m.toggleZen()) },
     { grp: 'View', ico: '', label: 'Toggle preview', key: 'Ctrl+\\', run: () => emit('cmd:toggle-preview') },
     { grp: 'View', ico: '', label: 'Toggle sidebar', key: 'Ctrl+Shift+B', run: () => emit('cmd:toggle-sidebar') },
     { grp: 'View', ico: '', label: 'Toggle theme', key: '', run: toggleTheme },
     { grp: 'View', ico: '', label: 'Toggle word wrap', key: '', run: toggleWrap },
     { grp: 'View', ico: '', label: 'PDF in new tab', key: '', run: openPdfInTab, when: () => hasPdf() },
     { grp: 'View', ico: '', label: 'Download PDF', key: '', run: downloadPdf, when: () => hasPdf() },
-    { grp: 'View', ico: '', label: 'Zoom in (preview)', key: 'Ctrl++', run: () => setZoom('1.25') },
-    { grp: 'View', ico: '', label: 'Fit preview to width', key: '', run: () => setZoom('fit-width') },
+    { grp: 'View', ico: '', label: 'Zoom in (preview)', key: 'Ctrl++', run: () => zoomBy(1.25) },
+    { grp: 'View', ico: '', label: 'Zoom out (preview)', key: 'Ctrl+-', run: () => zoomBy(0.8) },
+    { grp: 'View', ico: '', label: 'Fit preview to width', key: 'Ctrl+0', run: () => setZoom('fit-width') },
     { grp: 'View', ico: '', label: 'Settings', key: '', run: () => emit('cmd:settings') },
     { grp: 'View', ico: '', label: 'Keyboard shortcuts & help', key: 'F1', run: () => emit('cmd:shortcuts') },
   ];
+}
+
+function styleSelection(style) {
+  Promise.all([import('./editor/format.js'), import('./editor/index.js')]).then(([format, editor]) => {
+    if (!editor.currentPath()) { toast('Open a file before formatting.', { type: 'warn' }); return; }
+    format.wrapSelection(editor.editorView, style);
+  });
 }
 
 function switchEngine(engine) {
@@ -118,7 +150,7 @@ function gotoLinePrompt() {
 }
 
 function gotoPagePrompt() {
-  promptDialog('Gehe zu Seite', 'Seitennummer', String(state.pdf ? 1 : 1)).then((v) => {
+  promptDialog('Go to page', 'Page number', String(state.pdf ? 1 : 1)).then((v) => {
     if (v && /^\d+$/.test(v.trim())) gotoPage(parseInt(v.trim(), 10));
   });
 }
@@ -135,7 +167,7 @@ function insertEnvironmentPalette() {
 
 /* --------------------------------------------------- generische Palette */
 
-function runPalette(items, placeholder = 'Befehl eingeben …') {
+function runPalette(items, placeholder = 'Type a command …') {
   paletteItems = items;
   paletteIdx = 0;
   palettePick = null;
@@ -163,7 +195,7 @@ function renderPalette(filter) {
   palettePick = items;
   paletteIdx = Math.min(paletteIdx, Math.max(0, items.length - 1));
   const count = $('#palette-count');
-  if (count) count.textContent = items.length ? `${items.length} ${filter ? 'Treffer' : 'Befehle'}` : '';
+  if (count) count.textContent = items.length ? `${items.length} ${filter ? 'matches' : 'commands'}` : '';
   if (!items.length) {
     list.append(el('div', { class: 'pal-empty', text: 'No matching commands' }));
     return;
@@ -209,7 +241,7 @@ function pickPalette(i, items) {
 }
 
 export function openCommandPalette() {
-  runPalette(commands().map((c) => ({ ...c })), 'Befehl eingeben …');
+  runPalette(commands().map((c) => ({ ...c })), 'Type a command …');
 }
 
 /* --------------------------------------------------------- quick open */
@@ -219,7 +251,11 @@ let quickIdx = 0;
 
 export function openQuickOpen() {
   const files = state.files || [];
-  quickItems = files.map((f) => ({ label: basename(f), path: f, note: dirname(f) || state.project || '', run: () => openFile(f) }));
+  let recent = [];
+  try { recent = JSON.parse(localStorage.getItem('latex-recent-v1') || '[]'); } catch { recent = []; }
+  const rank = new Map(recent.map((p, i) => [p, i]));
+  const sorted = [...files].sort((a, b) => (rank.has(a) ? rank.get(a) : 1e9) - (rank.has(b) ? rank.get(b) : 1e9));
+  quickItems = sorted.map((f) => ({ label: basename(f), path: f, note: dirname(f) || state.project || '', run: () => openFile(f) }));
   quickIdx = 0;
   const input = $('#quickopen-input');
   input.value = '';
@@ -243,7 +279,7 @@ function renderQuick(filter) {
   quickItems._rendered = items;
   quickIdx = Math.min(quickIdx, Math.max(0, items.length - 1));
   const count = $('#quickopen-count');
-  if (count) count.textContent = items.length ? `${items.length} ${filter ? 'Treffer' : 'files'}` : '';
+  if (count) count.textContent = items.length ? `${items.length} ${filter ? 'matches' : 'files'}` : '';
   if (!items.length) { list.append(el('div', { class: 'pal-empty', text: 'No files found' })); return; }
   items.forEach((it, i) => {
     list.append(el('div', {
@@ -275,7 +311,7 @@ function pickQuick(i, items) {
   setTimeout(() => it.run(), 20);
 }
 
-/* --------------------------------------------------------- Tastenkürzel */
+/* --------------------------------------------------------- Shortcuts */
 
 const SHORTCUTS = [
   ['Editing & navigation', null],
@@ -288,7 +324,8 @@ const SHORTCUTS = [
   ['Go to line', 'Ctrl+G'],
   ['Find / replace', 'Ctrl+F / Ctrl+H'],
   ['Multi-cursor selection', 'Ctrl+D / Alt+click'],
-  ['Toggle comment', 'Ctrl+/'],
+  ['Toggle comment (line)', 'Ctrl+/'],
+  ['Bold / italic / emphasis / underline / math', 'Alt+Shift+B · I · E · U · M'],
   ['Switch tab', 'Ctrl+Alt+←/→'],
   ['Close tab', 'Middle-click'],
   ['Build & preview', null],
@@ -301,15 +338,21 @@ const SHORTCUTS = [
   ['PDF in new tab', 'button ↗'],
   ['Projects', null],
   ['Project menu (rename, duplicate, delete)', 'button ⋯'],
+  ['Project snapshots', 'button Snapshots'],
   ['New project / templates', 'button ＋'],
-  ['Demo-Projects anlegen', 'button Demos'],
+  ['Create sample projects', 'button Demos'],
   ['Export project as ZIP', 'button Export'],
   ['Import project from ZIP', 'button Import'],
   ['Find and replace across project', 'Ctrl+Shift+F'],
   ['Insert', null],
   ['Autocomplete', 'Ctrl+Space'],
   ['Insert environment', 'Ctrl+E'],
-  ['Autom. \\end bei } nach \\begin{…}', '}'],
+  ['Insert table / figure / math', 'Ctrl+Shift+P → Insert'],
+  ['Document statistics', 'palette → Show document statistics'],
+  ['Research: goals, tasks, notes', 'Alt+T'],
+  ['Bibliography manager', 'Alt+B'],
+  ['Focus mode', 'Alt+Z'],
+  ['Auto \\end on } after \\begin{…}', '}'],
   ['Indentation / snippet placeholders', 'Tab'],
   ['Show document snippets', 'Ctrl+Space at line start'],
   ['Other', null],
@@ -357,4 +400,5 @@ export function initPalette() {
   on('cmd:palette', openCommandPalette);
   on('cmd:quickopen', openQuickOpen);
   on('cmd:shortcuts', showShortcuts);
+  on('cmd:environment', insertEnvironmentPalette);
 }

@@ -1,4 +1,4 @@
-/* Projectsuche über alle Textdateien */
+/* Project search across all text files */
 
 import { api } from './api.js';
 import { state, emit, on } from './state.js';
@@ -95,6 +95,7 @@ export function initSearch() {
     $('#search-replace').focus();
     $('#search-replace').select();
   });
+  on('cmd:outline', () => activatePanel('outline'));
   on('project', () => {
     input.value = '';
     $('#search-replace').value = '';
@@ -103,7 +104,7 @@ export function initSearch() {
   });
 }
 
-/* ----------------------------------------------------------- Ersetzen */
+/* ----------------------------------------------------------- Replace */
 
 async function doReplace(limit) {
   if (!state.project) { toast('No project selected', { type: 'warn' }); return; }
@@ -113,9 +114,9 @@ async function doReplace(limit) {
 
   if (limit !== 1) {
     const ok = await confirmDialog(
-      'Alle Treffer ersetzen',
-      `“${q}“ with “${replacement}“ in all project files?`,
-      'Alle ersetzen',
+      'Replace all matches',
+      `Replace “${q}” with “${replacement}” in all project files?`,
+      'Replace all',
     );
     if (!ok) return;
   }

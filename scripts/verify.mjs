@@ -1,14 +1,41 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import WebSocket from 'ws';
 import JSZip from 'jszip';
 
-// Uses disposable projects only. Run against an already running Studio server.
+// Uses disposable projects only. Runs against the Studio server and starts one
+// itself when nothing is listening yet (set STUDIO_URL to verify a remote one).
 const base = process.env.STUDIO_URL || 'http://localhost:4180';
 const project = 'QA-' + Date.now();
 const created = new Set();
 let passed = 0;
 const messages = [];
+let serverProcess = null;
+
+async function reachable() {
+  try {
+    const response = await fetch(base + '/api/state', { signal: AbortSignal.timeout(2500) });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureServer() {
+  if (await reachable()) return;
+  if (process.env.STUDIO_URL) throw new Error(`No server reachable at ${base}`);
+  serverProcess = spawn(process.execPath, ['server/index.js'], { stdio: 'ignore' });
+  const deadline = Date.now() + 25000;
+  while (Date.now() < deadline) {
+    if (await reachable()) { console.log('Started a Studio server for this run.'); return; }
+    if (serverProcess.exitCode != null) break;
+    await delay(250);
+  }
+  throw new Error('Could not start the LaTeX Studio server for verification');
+}
+
+await ensureServer();
 const ws = new WebSocket(base.replace(/^http/, 'ws') + '/ws');
 ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
 await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
@@ -49,9 +76,13 @@ Hello from the verification document.
 
 try {
   await check('HTML and JavaScript assets', async () => {
-    for (const route of ['/', '/studio', '/dist/app.js', '/styles/landing.css', '/styles/workspace.css', '/vendor/pdfjs/build/pdf.worker.min.mjs']) {
+    for (const route of ['/', '/studio', '/dist/app.js', '/client/landing.js', '/styles/landing.css', '/styles/workspace.css', '/vendor/pdfjs/build/pdf.worker.min.mjs']) {
       const response = await fetch(base + route); assert.equal(response.status, 200);
-      if (route === '/') assert.match(await response.text(), /Write with focus/);
+      if (route === '/') {
+        const html = await response.text();
+        assert.match(html, /Write the paper/);
+        assert.match(html, /id="app-demo"/);
+      }
       if (route === '/studio') assert.match(await response.text(), /id="app"/);
     }
   });
@@ -120,6 +151,37 @@ try {
     assert.match((await request('/api/log?project=' + project + '&file=main.tex')).log, /Output written/);
     assert.match(JSON.stringify(await request('/api/meta?project=' + project + '&file=main.tex')), /sec:verify/);
   });
+  await check('BibTeX parsing: nested braces, quotes, bare values', async () => {
+    await save('references.bib', [
+      '@article{nested2026,',
+      '  title = {A {Nested} Title with {Braces}},',
+      '  author = {Doe, Jane and Roe, Richard},',
+      '  year = 2026,',
+      '  journal = {Journal of Checks}',
+      '}',
+      '',
+      '@book{quoted2020,',
+      '  title = "A Quoted Book",',
+      '  author = {Smith, Sam},',
+      '  publisher = {Some Press},',
+      '  year = {2020}',
+      '}',
+      '',
+    ].join('\n'));
+    const meta = await request('/api/meta?project=' + project + '&file=main.tex');
+    const byKey = new Map((meta.bib || []).map((b) => [b.key, b]));
+    const nested = byKey.get('nested2026');
+    const quoted = byKey.get('quoted2020');
+    assert.ok(nested, 'nested2026 missing from ' + JSON.stringify(meta.bib));
+    assert.equal(nested.title, 'A Nested Title with Braces');
+    assert.equal(nested.author, 'Doe, Jane and Roe, Richard');
+    assert.equal(nested.year, '2026');
+    assert.equal(nested.journal, 'Journal of Checks');
+    assert.ok(quoted, 'quoted2020 missing');
+    assert.equal(quoted.title, 'A Quoted Book');
+    assert.equal(quoted.year, '2020');
+    assert.equal(quoted.journal, 'Some Press');
+  });
   await check('SyncTeX source-to-PDF and PDF-to-source', async () => {
     const forward = await request('/api/synctex?project=' + project + '&file=main.tex&op=view&line=6');
     assert.equal(forward.ok, true);
@@ -168,5 +230,6 @@ try {
 } finally {
   ws.close();
   for (const name of created) await request('/api/fs', { op: 'delete', path: name });
+  if (serverProcess) serverProcess.kill();
   console.log('Disposable projects removed.');
 }

@@ -1,101 +1,420 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#f8f8f6" />
-  <meta name="description" content="A focused local LaTeX workspace with a live PDF preview, SyncTeX, citation tools, and package diagnostics." />
-  <title>LaTeX Studio — Write. Compile. Understand.</title>
+  <meta name="theme-color" content="#f7f6f2" />
+  <meta name="description" content="LaTeX Studio is a local-first LaTeX workspace: LaTeX-aware editor, live PDF preview, two-way SyncTeX, bibliography manager, build diagnostics, change history and research tools — without an account." />
+  <meta name="color-scheme" content="light dark" />
+  <meta property="og:title" content="LaTeX Studio — a local-first LaTeX workspace" />
+  <meta property="og:description" content="Write, compile and review LaTeX in one focused interface. Live PDF preview, SyncTeX, bibliography manager, build diagnostics and local history." />
+  <meta property="og:type" content="website" />
+  <title>LaTeX Studio — write, compile and review LaTeX in one place</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/styles/landing.css?v=0.1.1" />
+  <link rel="stylesheet" href="/styles/landing.css?v=0.3.0" />
+  <script>
+    // Apply the stored theme before first paint so the page never flashes.
+    (function () {
+      try {
+        var saved = localStorage.getItem('latex-landing-theme');
+        var system = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.dataset.theme = saved || system;
+      } catch (e) { /* private mode */ }
+    })();
+  </script>
+  <script src="/client/landing.js?v=0.3.0" defer></script>
 </head>
 <body>
+  <a class="skip-link" href="#workspace">Skip to content</a>
   <div class="site-shell">
     <header class="site-header">
-      <a class="wordmark" href="/" aria-label="LaTeX Studio home"><span class="mark">λ</span><span>LaTeX Studio</span></a>
-      <nav class="nav-links" aria-label="Main navigation">
-        <a href="#workspace">Workspace</a>
-        <a href="https://github.com/schBenedikt/latex/blob/main/docs/USER_GUIDE.md">Documentation</a>
-        <a href="https://github.com/schBenedikt/latex" target="_blank" rel="noreferrer">GitHub</a>
+      <a class="wordmark" href="/" aria-label="LaTeX Studio home">
+        <span class="mark" aria-hidden="true">λ</span>
+        <span class="wordmark-text">LaTeX Studio</span>
+        <span class="version-badge" id="version-badge">v0.1.0</span>
+      </a>
+      <button id="nav-toggle" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="site-nav" class="nav-links" aria-label="Main navigation">
+        <a href="#features" data-nav="features">Features</a>
+        <a href="#demo-title" data-nav="demo">Demo</a>
+        <a href="#templates-title" data-nav="templates">Templates</a>
+        <a href="#quickstart" data-nav="quickstart">Quick start</a>
+        <a href="#faq-title" data-nav="faq">FAQ</a>
+        <a href="https://github.com/schBenedikt/latex" target="_blank" rel="noreferrer">GitHub <span class="ext" aria-hidden="true">↗</span></a>
       </nav>
-      <a class="nav-cta" href="/studio">Open Studio <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></a>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Switch colour theme" title="Switch light / dark">
+          <svg class="ico-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
+          <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+        <a class="nav-cta" href="/studio">Open Studio <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></a>
+      </div>
+      <span class="scroll-progress" aria-hidden="true"><i id="scroll-progress-bar"></i></span>
     </header>
 
     <main>
+      <!-- ------------------------------------------------------------ Hero -->
       <section class="hero" id="workspace">
         <div class="hero-text">
-          <div class="eyebrow">A local workspace for LaTeX</div>
-          <h1>Write with focus.<br /><em>See every change.</em></h1>
-          <p class="hero-copy">A quiet place to work on technical documents. Edit your source, follow the PDF as it changes, and track down build issues without losing your place.</p>
+          <div class="eyebrow">Local-first LaTeX workspace</div>
+          <h1>Write the paper.<br /><em>See the page.</em></h1>
+          <p class="hero-copy">
+            LaTeX Studio keeps your source, the compiled PDF and the tools around them in one calm
+            window: LaTeX-aware editing, two-way SyncTeX, a bibliography manager, build diagnostics
+            and a local history of every save.
+          </p>
           <div class="hero-actions">
             <a class="hero-cta" href="/studio">Open the workspace <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></a>
-            <a class="text-link" href="https://github.com/schBenedikt/latex/blob/main/docs/USER_GUIDE.md">Read the guide</a>
+            <a class="text-link" href="#demo-title">Try the interface below</a>
           </div>
-          <div class="hero-meta"><span>LOCAL FIRST</span><i class="meta-dot"></i><span>PDF IN VIEW</span><i class="meta-dot"></i><span>NO REQUIRED CLOUD</span></div>
+          <div class="hero-install">
+            <code id="install-cmd">npm install &amp;&amp; npm start</code>
+            <button class="mini-btn copy-btn" data-copy="npm install && npm start">Copy</button>
+          </div>
+          <ul class="hero-facts">
+            <li><b>Runs on your machine</b><span>Your projects stay in your own folders</span></li>
+            <li><b>No account, no cloud</b><span>Nothing is uploaded or analysed</span></li>
+            <li><b>Your TeX installation</b><span>pdfLaTeX, XeLaTeX, LuaLaTeX, pLaTeX</span></li>
+          </ul>
         </div>
 
-        <div class="product-frame" aria-label="Illustration of the LaTeX Studio editor and PDF preview">
-          <div class="frame-top"><span class="window-dots"><i></i><i></i><i></i></span><span>PROJECT / PAPER.MAIN.TEX</span><span>COMPILED</span></div>
-          <div class="workspace-preview">
-            <aside class="preview-files"><div class="preview-overline">Project files</div><div class="file-row selected">◌ &nbsp;main.tex</div><div class="file-row">▤ &nbsp;references.bib</div><div class="file-row">▱ &nbsp;figures/</div><div class="file-row">▱ &nbsp;chapters/</div></aside>
-            <div class="preview-editor"><div class="preview-bar">main.tex <span style="margin-left:auto;color:#a1aaa3">Saved</span></div><div class="code-lines" aria-hidden="true">
-              <div><span class="ln">1</span><span class="cmd">\documentclass</span><span class="arg">{article}</span></div>
-              <div><span class="ln">2</span></div>
-              <div><span class="ln">3</span><span class="comment">% A clear place to think</span></div>
-              <div><span class="ln">4</span><span class="cmd">\usepackage</span><span class="arg">{amsmath}</span></div>
-              <div><span class="ln">5</span><span class="cmd">\usepackage</span><span class="arg">{graphicx}</span></div>
-              <div><span class="ln">6</span></div>
-              <div><span class="ln">7</span><span class="cmd">\begin</span><span class="arg">{document}</span></div>
-              <div><span class="ln">8</span><span class="cmd">\section</span><span class="arg">{Introduction}</span></div>
-              <div><span class="ln">9</span>This is where the work begins.</div>
-              <div><span class="ln">10</span></div>
-              <div><span class="ln">11</span><span class="cmd">\begin</span><span class="arg">{equation}</span></div>
-              <div><span class="ln">12</span>f(x) = <span class="arg">\int</span> g(t)\,dt</div>
-              <div><span class="ln">13</span><span class="cmd">\end</span><span class="arg">{equation}</span></div>
-              <div><span class="ln">14</span></div>
-              <div><span class="ln">15</span><span class="cmd">\end</span><span class="arg">{document}</span></div>
-            </div></div>
-            <div class="preview-paper"><div class="paper"><div class="paper-title">A Clearer Way<br />to Work with LaTeX</div><div class="paper-meta">Author Name &nbsp; · &nbsp; October 2026</div><div class="paper-rule"></div><div class="paper-heading">Abstract</div><div class="paper-copy">A considered workflow makes complex documents easier to build, review, and understand. Keep your source close to the result.</div><div class="paper-heading">1 &nbsp; Introduction</div><div class="paper-copy">Typesetting, references, and structure come together in one carefully composed document.</div><div class="paper-equation">f(x) = ∫ g(t) dt</div><div class="paper-copy">Changes to the source stay connected to the page, so you can move from an error to its cause.</div></div></div>
+        <div class="demo-intro">
+          <div class="eyebrow" id="demo-title">Interactive demo</div>
+          <p>No video, no screenshots — this is the real layout, built from the same components. Switch panels, flip between source and PDF, click a highlighted line for a SyncTeX jump or run a build.</p>
+        </div>
+
+        <div class="demo" id="app-demo">
+          <div class="demo-chrome">
+            <span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="demo-title">localhost:4180/studio · latency-paper</span>
+            <span class="demo-status" id="demo-status" aria-live="polite">Ready</span>
           </div>
-          <div class="frame-caption">SOURCE ↔ PDF · SYNCTEX</div>
+          <div class="demo-body" id="demo-body" data-view="split">
+            <nav class="demo-rail" role="tablist" aria-label="Workspace panels">
+              <button class="demo-rail-btn active" role="tab" aria-selected="true" data-demo-panel="files" aria-label="Files" title="Files">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+              </button>
+              <button class="demo-rail-btn" role="tab" aria-selected="false" data-demo-panel="outline" aria-label="Outline" title="Outline">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+              </button>
+              <button class="demo-rail-btn" role="tab" aria-selected="false" data-demo-panel="bibliography" aria-label="Bibliography" title="Bibliography">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4v16H4ZM10 4h4v16h-4ZM17 5l3 15"/></svg>
+              </button>
+              <button class="demo-rail-btn" role="tab" aria-selected="false" data-demo-panel="history" aria-label="Change history" title="Change history">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5"/></svg>
+              </button>
+            </nav>
+
+            <div class="demo-panels">
+              <section class="demo-panel active" data-demo-panel-body="files">
+                <div class="demo-overline">Project files</div>
+                <button class="demo-file active" data-demo-file="main.tex">main.tex</button>
+                <button class="demo-file" data-demo-file="chapters/method.tex">chapters/</button>
+                <button class="demo-file" data-demo-file="references.bib">references.bib</button>
+              </section>
+              <section class="demo-panel" data-demo-panel-body="outline">
+                <div class="demo-overline">Outline</div>
+                <button class="demo-outline" data-demo-jump="intro"><b>1</b><span>Introduction</span></button>
+                <button class="demo-outline sub" data-demo-jump="method"><b>2</b><span>Method</span></button>
+                <button class="demo-outline sub" data-demo-jump="eq"><b>2.1</b><span>Model</span></button>
+                <button class="demo-outline" data-demo-jump="results"><b>3</b><span>Results</span></button>
+              </section>
+              <section class="demo-panel" data-demo-panel-body="bibliography">
+                <div class="demo-overline">2 entries · 1 cited · 1 missing</div>
+                <button class="demo-bib" data-demo-cite="wenzel2025"><b>wenzel2025</b><span>cited 2× · Wenzel, Petersen · 2025</span><em>Cite</em></button>
+                <button class="demo-bib" data-demo-cite="knuth1984"><b>knuth1984</b><span>never cited · Knuth · 1984</span><em>Cite</em></button>
+                <div class="demo-bib-warn">⚠ ghost2019 cited · no BibTeX entry</div>
+              </section>
+              <section class="demo-panel" data-demo-panel-body="history">
+                <div class="demo-overline">Change history · today</div>
+                <button class="demo-hist" data-demo-diff="1"><b>chapters/method.tex</b><span>+24 chars</span><em>Diff</em></button>
+                <button class="demo-hist" data-demo-diff="2"><b>Snapshot before rewrite</b><span>6 files</span><em>Restore</em></button>
+                <div class="demo-diff" id="demo-diff" hidden>
+                  <span class="add">+ We model the structural cost directly.</span>
+                  <span class="del">− We model the cost.</span>
+                </div>
+              </section>
+            </div>
+
+            <div class="demo-editor">
+              <div class="demo-tabs"><span class="active">main.tex</span><span>chapters/method.tex</span><span>references.bib</span></div>
+              <div class="demo-code" id="demo-code">
+                <button class="demo-line" data-demo-sync="intro"><i>12</i><span class="c-cmd">\section</span><span class="c-arg">{Introduction}</span></button>
+                <button class="demo-line" data-demo-sync="intro"><i>13</i><span class="c-txt">Typesetting pipelines are the slowest step, see</span> <span class="c-cite">\cite{wenzel2025}</span>.</button>
+                <button class="demo-line" data-demo-sync="method"><i>21</i><span class="c-cmd">\section</span><span class="c-arg">{Method}</span></button>
+                <button class="demo-line" data-demo-sync="eq"><i>24</i><span class="c-cmd">\begin</span><span class="c-arg">{equation}</span><span class="c-txt">  T(D) = \beta_0 + \beta_1 n + \varepsilon</span></button>
+                <button class="demo-line" data-demo-sync="eq"><i>25</i><span class="c-cmd">\end</span><span class="c-arg">{equation}</span></button>
+                <button class="demo-line" data-demo-sync="results"><i>31</i><span class="c-cmd">\section</span><span class="c-arg">{Results}</span></button>
+                <div class="demo-line placeholder" id="demo-cite-line" hidden><i>32</i><span class="c-cite"></span></div>
+              </div>
+            </div>
+
+            <div class="demo-pdf">
+              <div class="demo-page" id="demo-page">
+                <div class="demo-page-title">Structure-Aware Latency Prediction</div>
+                <div class="demo-page-meta">Kara Wenzel · Tom Achterberg · October 2026</div>
+                <button class="demo-pdf-block" data-demo-sync="intro"><b>1&nbsp; Introduction</b><span>Typesetting pipelines are the slowest step of the writing loop.</span></button>
+                <button class="demo-pdf-block" data-demo-sync="method"><b>2&nbsp; Method</b><span>For a document with n sections and include depth d.</span></button>
+                <button class="demo-pdf-block eq" data-demo-sync="eq"><em>T(D) = β₀ + β₁n + β₂d + ε</em><span>(1)</span></button>
+                <button class="demo-pdf-block" data-demo-sync="results"><b>3&nbsp; Results</b><span>R² = 0.81 on held-out projects.</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="demo-toolbar">
+            <div class="demo-views" role="group" aria-label="Workspace layout">
+              <button data-demo-view="source" aria-pressed="false">Source</button>
+              <button class="active" data-demo-view="split" aria-pressed="true">Split</button>
+              <button data-demo-view="pdf" aria-pressed="false">PDF</button>
+            </div>
+            <button class="demo-build" id="demo-build">▶ Build <kbd>Ctrl+B</kbd></button>
+            <span class="demo-hint" id="demo-hint">Click a rail panel, a source line or a page block</span>
+          </div>
         </div>
       </section>
 
-      <section class="feature-strip" aria-label="Workspace features">
-        <article class="feature"><div class="feature-index">01 / EDIT</div><h2>A focused source editor</h2><p>LaTeX completion, project navigation, and useful shortcuts.</p></article>
-        <article class="feature"><div class="feature-index">02 / PREVIEW</div><h2>Source beside the page</h2><p>Compile on demand and keep the PDF in the same view.</p></article>
-        <article class="feature"><div class="feature-index">03 / DIAGNOSE</div><h2>Errors with a way forward</h2><p>Find the source line, check packages, and return to editing.</p></article>
-        <article class="feature"><div class="feature-index">04 / KEEP</div><h2>Your files stay local</h2><p>Work with your own TeX installation and project folders.</p></article>
-      </section>
-
-      <section class="workflow" aria-labelledby="workflow-title">
+      <!-- ------------------------------------------- Existing local projects -->
+      <section class="projects" id="workspace-projects" hidden>
         <div class="section-heading">
-          <div class="eyebrow">A complete writing loop</div>
-          <h2 id="workflow-title">Stay close to the document.</h2>
-          <p>Move from source to output and back again, with the tools you already use.</p>
+          <div class="eyebrow">Your workspace</div>
+          <h2>Pick up where you left off.</h2>
+          <p>These are the projects in this installation. Opening one jumps straight to its main document.</p>
         </div>
-        <div class="workflow-grid">
-          <article class="workflow-item"><span>01</span><div><h3>Write in your project</h3><p>Keep chapters, figures, and bibliographies together. Search across files and start from a document template.</p></div></article>
-          <article class="workflow-item"><span>02</span><div><h3>Build with your TeX setup</h3><p>Use TeX Live or MiKTeX on your machine. Check required packages and follow compiler diagnostics back to the source.</p></div></article>
-          <article class="workflow-item"><span>03</span><div><h3>Review and keep moving</h3><p>Read the PDF beside your source, navigate with SyncTeX, and bring in references from a Zotero BibTeX export.</p></div></article>
+        <div class="project-grid" id="project-grid"></div>
+        <p class="project-note" id="project-note"></p>
+      </section>
+
+      <!-- --------------------------------------------------- Feature pillars -->
+      <section class="pillars" id="features">
+        <div class="section-heading">
+          <div class="eyebrow">What it is</div>
+          <h2>One workspace for the whole writing loop.</h2>
+          <p>Six parts of the job that usually live in six different tools.</p>
+        </div>
+        <div class="pillar-grid">
+          <article class="pillar">
+            <span class="pillar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5H6a2 2 0 0 0-2 2v3l-2 2 2 2v3a2 2 0 0 0 2 2h2M16 5h2a2 2 0 0 1 2 2v3l2 2-2 2v3a2 2 0 0 1-2 2h-2"/></svg></span>
+            <h3>LaTeX-aware editing</h3>
+            <p>Autocomplete for commands, environments, labels and citation keys, snippets with placeholders, automatic <code>\end{…}</code>, comment toggle and text commands.</p>
+          </article>
+          <article class="pillar">
+            <span class="pillar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></span>
+            <h3>Source beside the page</h3>
+            <p>Live PDF preview with zoom, page navigation and in-document search. Two-way SyncTeX jumps between a source line and its exact rectangle on the page.</p>
+          </article>
+          <article class="pillar">
+            <span class="pillar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg></span>
+            <h3>Builds you can read</h3>
+            <p>Choose the engine per project, watch the live log, jump from a compiler error to the line, and install a missing TeX package and rebuild in one step.</p>
+          </article>
+          <article class="pillar">
+            <span class="pillar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h4v16H4ZM10 4h4v16h-4ZM17 5l3 15"/></svg></span>
+            <h3>References that stay honest</h3>
+            <p>A bibliography manager tells you which keys are cited, which entries nobody uses and which citations have no entry at all — then inserts the citation for you.</p>
+          </article>
+          <article class="pillar">
+            <span class="pillar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19Z"/><path d="m14.5 6.5 3 3"/></svg></span>
+            <h3>Research tools in reach</h3>
+            <p>Per-project word goals, project-wide TODO/FIXME tracking, private notes, document statistics and a numbered table of contents that mirrors the final PDF.</p>
+          </article>
+          <article class="pillar">
+            <span class="pillar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg></span>
+            <h3>Nothing gets lost</h3>
+            <p>Every saved version stays in a local change history with a line diff and one-click restore. Snapshots capture whole projects before a rewrite; ZIP and GitHub import move them around.</p>
+          </article>
         </div>
       </section>
 
-      <section class="integrations" aria-label="Tools and integrations">
-        <div><div class="feature-index">FITS YOUR TOOLCHAIN</div><h2>Bring your own tools.</h2></div>
-        <div class="integration-list">
-          <a href="https://github.com/schBenedikt/latex/blob/main/docs/INTEGRATIONS.md"><strong>TeX Live · MiKTeX</strong><span>Compile locally and inspect package availability <b>↗</b></span></a>
-          <a href="https://github.com/schBenedikt/latex/blob/main/docs/INTEGRATIONS.md"><strong>Zotero · Better BibTeX</strong><span>Import and merge BibTeX exports into your project <b>↗</b></span></a>
-          <a href="https://github.com/schBenedikt/latex/blob/main/docs/INTEGRATIONS.md"><strong>GitHub</strong><span>Start from a public repository archive <b>↗</b></span></a>
+      <!-- -------------------------------------------------------------- Tour -->
+      <section class="tour" aria-labelledby="tour-title">
+        <div class="section-heading">
+          <div class="eyebrow">The workflow</div>
+          <h2 id="tour-title">Five jobs, one window.</h2>
+          <p>Click through a writing session. Every panel below exists in the app exactly as shown.</p>
+        </div>
+        <div class="tour-tabs" role="tablist" aria-label="Feature tour">
+          <button class="tour-tab active" data-tour="write" role="tab" aria-selected="true"><i>01</i> Write</button>
+          <button class="tour-tab" data-tour="build" role="tab" aria-selected="false"><i>02</i> Build</button>
+          <button class="tour-tab" data-tour="navigate" role="tab" aria-selected="false"><i>03</i> Navigate</button>
+          <button class="tour-tab" data-tour="cite" role="tab" aria-selected="false"><i>04</i> Cite &amp; research</button>
+          <button class="tour-tab" data-tour="organize" role="tab" aria-selected="false"><i>05</i> Organize &amp; recover</button>
+        </div>
+        <div class="tour-stage">
+          <div class="tour-copy">
+            <h3 id="tour-heading">Write with a LaTeX-aware editor</h3>
+            <p id="tour-text">Syntax highlighting, autocomplete and snippets that know commands, environments, labels and citations.</p>
+            <ul id="tour-points" class="tour-points"></ul>
+            <div class="tour-actions">
+              <a class="hero-cta" href="/studio">Open the workspace <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></a>
+              <span class="tour-hint" id="tour-hint">Auto-advances · click a step to explore</span>
+            </div>
+          </div>
+          <div class="tour-demo" id="tour-demo" aria-live="polite"></div>
         </div>
       </section>
 
+      <!-- --------------------------------------------------- Feature explorer -->
+      <section class="deep-features" aria-labelledby="deep-title">
+        <div class="section-heading">
+          <div class="eyebrow">Everything in one place</div>
+          <h2 id="deep-title">Every feature, nothing hidden.</h2>
+          <p>Filter the complete list — search for what you need, or browse by category. Press <kbd>/</kbd> to jump to the search field.</p>
+        </div>
+        <div class="explorer-controls">
+          <input id="feature-filter" type="search" placeholder="Filter features … e.g. sync, zotero, diff" aria-label="Filter features" />
+          <div class="explorer-chips" id="feature-chips" role="group" aria-label="Feature categories"></div>
+          <span id="feature-count" class="keys-count"></span>
+        </div>
+        <div class="explorer-grid" id="feature-grid"></div>
+      </section>
+
+      <!-- --------------------------------------------------------- Templates -->
+      <section class="templates" aria-labelledby="templates-title">
+        <div class="section-heading">
+          <div class="eyebrow">Start without setup</div>
+          <h2 id="templates-title">Templates for the usual documents.</h2>
+          <p>Pick one in the “New project” dialog — structure, packages and sample content are ready to compile.</p>
+        </div>
+        <div class="template-grid-landing" role="group" aria-label="Choose a template to preview">
+          <button class="tpl-card active" data-template="article"><strong>Article</strong><span>Sections, abstract, bibliography and figures.</span><em>preview ↓</em></button>
+          <button class="tpl-card" data-template="thesis"><strong>Thesis</strong><span>Chapters, front matter and cleveref setup.</span><em>preview ↓</em></button>
+          <button class="tpl-card" data-template="beamer"><strong>Presentation</strong><span>Beamer slides with title and outline frames.</span><em>preview ↓</em></button>
+          <button class="tpl-card" data-template="report"><strong>Report</strong><span>Multi-file layout with chapters and plots.</span><em>preview ↓</em></button>
+          <button class="tpl-card" data-template="letter"><strong>Letter</strong><span>KOMA-Script letter with address fields.</span><em>preview ↓</em></button>
+          <button class="tpl-card" data-template="math"><strong>Mathematics</strong><span>Theorems, proofs and amsmath presets.</span><em>preview ↓</em></button>
+        </div>
+        <div class="template-preview" aria-live="polite">
+          <div class="template-preview-head"><span id="template-preview-name">article · main.tex</span><span class="template-preview-actions"><button id="template-copy" class="mini-btn">Copy snippet</button><a class="mini-btn primary" href="/studio">Open in Studio →</a></span></div>
+          <pre class="template-preview-code"><code id="template-preview-code">\documentclass[11pt]{article}
+\usepackage{amsmath, graphicx, hyperref}
+
+\title{A Clear Argument}
+\author{Author Name}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}\label{sec:intro}
+Start writing here — pick this template
+in the “New project” dialog.
+\end{document}</code></pre>
+        </div>
+      </section>
+
+      <!-- ----------------------------------------------------------- Shortcuts -->
+      <section class="keys" aria-labelledby="keys-title">
+        <div class="section-heading">
+          <div class="eyebrow">Keyboard first</div>
+          <h2 id="keys-title">Stay on the keyboard.</h2>
+          <p>The full shortcut list lives in the app behind F1. These carry a whole session.</p>
+        </div>
+        <div class="keys-filter-row"><input id="keys-filter" type="search" placeholder="Filter shortcuts …" aria-label="Filter shortcuts" /><span id="keys-count" class="keys-count"></span></div>
+        <div class="keys-grid" id="keys-grid"></div>
+      </section>
+
+      <!-- ---------------------------------------------------------- Quick start -->
+      <section class="quickstart" id="quickstart" aria-labelledby="quickstart-title">
+        <div class="section-heading">
+          <div class="eyebrow">Run it yourself</div>
+          <h2 id="quickstart-title">Up in two commands.</h2>
+          <p>Node.js 18+ and npm. TeX Live or MiKTeX for compilation — or compile in the browser on the hosted build.</p>
+        </div>
+        <div class="quickstart-tabs" role="tablist" aria-label="Installation method">
+          <button class="quickstart-tab active" role="tab" aria-selected="true" data-install="local">Local server</button>
+          <button class="quickstart-tab" role="tab" aria-selected="false" data-install="cloudflare">Cloudflare Pages</button>
+        </div>
+        <div class="quickstart-grid" id="quickstart-grid"></div>
+        <div class="requirements" id="requirements"></div>
+      </section>
+
+      <!-- ------------------------------------------------------------ Privacy -->
+      <section class="privacy" aria-labelledby="privacy-title">
+        <div class="privacy-copy">
+          <div class="eyebrow">Privacy by design</div>
+          <h2 id="privacy-title">Your documents never leave your machine.</h2>
+          <p>
+            There is no LaTeX Studio account and no upload step. Projects live in your own folders,
+            history and snapshots are stored in your browser, and the Zotero key you enter stays on
+            your device. The hosted build serves only static assets — and then your sources and PDFs
+            stay in that browser.
+          </p>
+          <div class="privacy-actions">
+            <a class="mini-btn" href="https://github.com/schBenedikt/latex/blob/main/docs/SECURITY.md" target="_blank" rel="noreferrer">Security notes ↗</a>
+            <a class="mini-btn" href="https://github.com/schBenedikt/latex/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noreferrer">Architecture ↗</a>
+          </div>
+        </div>
+        <ul class="privacy-list">
+          <li><b>No telemetry</b><span>Nothing is measured, reported or phoned home.</span></li>
+          <li><b>No hidden sync</b><span>Local history, snapshots, goals and notes use browser storage.</span></li>
+          <li><b>Explicit networking</b><span>Only GitHub import and the Zotero API you connect yourself.</span></li>
+          <li><b>Read your own code</b><span>The whole application is plain JavaScript in one repository.</span></li>
+        </ul>
+      </section>
+
+      <!-- ---------------------------------------------------------------- FAQ -->
+      <section class="faq" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <div class="eyebrow">Questions</div>
+          <h2 id="faq-title">Short answers.</h2>
+          <p><button id="faq-expand" class="mini-btn">Expand all</button> <button id="faq-collapse" class="mini-btn">Collapse</button></p>
+        </div>
+        <div class="faq-list">
+          <details open><summary>Where are my files stored?</summary><p>On the local server under <code>projects/</code>, or — on the hosted version — in your browser's IndexedDB. The Worker only serves static assets.</p></details>
+          <details><summary>Do I need a TeX installation?</summary><p>For the desktop server: yes, TeX Live or MiKTeX for compilation and package checks. The hosted build compiles pdfLaTeX and XeLaTeX in WebAssembly instead.</p></details>
+          <details><summary>How do citations work?</summary><p>The bibliography manager lists every entry of your <code>.bib</code> files, shows which keys the document cites and which citations have no entry. Import a Zotero / Better BibTeX export, browse your Zotero library live, and insert <code>\cite{…}</code> from the panel or the autocomplete.</p></details>
+          <details><summary>Can I go back after a bad edit?</summary><p>Yes. The change history keeps every saved version of a file — open it from the project menu to see a line diff and restore any version. Snapshots additionally capture whole projects before a rewrite.</p></details>
+          <details><summary>How do I track my writing progress?</summary><p>Open the research panel (<code>Alt+T</code>): set a word goal per project, watch the progress bar fill across all files, filter open TODO/FIXME notes, and keep project notes in the same place.</p></details>
+          <details><summary>Can I link to a specific document?</summary><p>Yes — <code>/studio?project=Paper&amp;file=chapters/intro.tex&amp;line=42</code> opens that project, file and line directly. The project cards on this page use the same mechanism.</p></details>
+          <details><summary>Is there a distraction-free mode?</summary><p>Press <code>Alt+Z</code> for focus mode. The editor stays centered while the sidebar, preview and console disappear.</p></details>
+          <details><summary>Can two people edit the same project?</summary><p>Connected editors on the same local server see each other and receive saved changes immediately; unsaved local edits are never overwritten. It is a work-in-progress feature, not internet multiplayer.</p></details>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------------------- Close -->
       <section class="closing">
-        <div><div class="eyebrow">LaTeX Studio · 0.1</div><h2>Make room for the work.</h2><p>Open a project or start from one of the included templates.</p></div>
+        <div>
+          <div class="eyebrow">Free · Local-first · No account</div>
+          <h2>Make room for the work.</h2>
+          <p>Your thesis, paper or presentation — from blank page to compiled PDF, with references, tasks and focus time in one calm place.</p>
+        </div>
         <a class="hero-cta" href="/studio">Start writing <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-5-5 5 5-5 5"/></svg></a>
       </section>
     </main>
-    <footer class="site-footer"><span>LaTeX Studio · A local writing environment</span><nav class="footer-links" aria-label="Footer navigation"><a href="https://github.com/schBenedikt/latex/blob/main/docs/USER_GUIDE.md">Documentation</a><a href="https://github.com/schBenedikt/latex/blob/main/docs/INTEGRATIONS.md">Integrations</a><a href="https://github.com/schBenedikt/latex" target="_blank" rel="noreferrer">Source code</a></nav></footer>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <a class="wordmark" href="/" aria-label="LaTeX Studio home"><span class="mark" aria-hidden="true">λ</span><span class="wordmark-text">LaTeX Studio</span></a>
+        <p>A local-first LaTeX workspace. Published without a license declaration — obtain permission before redistributing.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <div>
+          <span>Product</span>
+          <a href="/studio">Open Studio</a>
+          <a href="#features">Features</a>
+          <a href="#demo-title">Demo</a>
+          <a href="#templates-title">Templates</a>
+        </div>
+        <div>
+          <span>Documentation</span>
+          <a href="https://github.com/schBenedikt/latex/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noreferrer">User guide ↗</a>
+          <a href="https://github.com/schBenedikt/latex/blob/main/docs/INTEGRATIONS.md" target="_blank" rel="noreferrer">Integrations ↗</a>
+          <a href="https://github.com/schBenedikt/latex/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noreferrer">Architecture ↗</a>
+          <a href="https://github.com/schBenedikt/latex/blob/main/docs/SECURITY.md" target="_blank" rel="noreferrer">Security ↗</a>
+        </div>
+        <div>
+          <span>Project</span>
+          <a href="https://github.com/schBenedikt/latex" target="_blank" rel="noreferrer">Source code ↗</a>
+          <a href="https://github.com/schBenedikt/latex/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">Changelog ↗</a>
+          <a href="https://github.com/schBenedikt/latex/blob/main/docs/CLOUDFLARE.md" target="_blank" rel="noreferrer">Cloudflare deploy ↗</a>
+        </div>
+      </nav>
+      <div class="footer-meta">
+        <span id="footer-version">LaTeX Studio</span>
+        <span>Requires Node.js 18+ · TeX Live or MiKTeX for local builds</span>
+      </div>
+    </footer>
+    <button id="to-top" class="to-top" aria-label="Back to top" title="Back to top">↑</button>
   </div>
 </body>
 </html>

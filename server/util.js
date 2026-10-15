@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 
 const execFileP = promisify(execFile);
 
-/** Extensions/Names, die als Build-Artefakte gelten und standardmäßig ausgeblendet werden */
+/** Extensions/names considered build artifacts and hidden by default */
 export const ARTIFACT_PATTERNS = [
   /\.(aux|log|out|toc|lof|lot|fls|fdb_latexmk|blg|bbl|bcf|run\.xml|nav|snm|vrb|idx|ilg|ind|brf|bbl|dvi|fdb|tdo|synctex\.gz|synctex|xdv|mw|glg|glo|gls|glstex|ist|acn|acr|alg|nlo|nls|lol|abx|abd|tlg)$/,
   /^\.DS_Store$/, /^Thumbs\.db$/, /^\.git$/, /^\.latexstudio\.tmp$/,
@@ -17,7 +17,7 @@ export function isArtifact(name) {
   return ARTIFACT_PATTERNS.some((re) => re.test(name));
 }
 
-/* ------------------------------------------------------------------ Pfade */
+/* ------------------------------------------------------------------ Paths */
 
 export function makeResolver(root) {
   const ROOT = path.resolve(root);
@@ -68,8 +68,8 @@ export async function readTree(absDir, { showAll = false, depth = 0, maxDepth = 
   for (const e of entries) {
     if (!showAll && isArtifact(e.name)) continue;
     const full = path.join(absDir, e.name);
-    // Pfade sind relativ zum Arbeitsbereich (root), damit sie im Client
-    // direkt mit den Tab-/Dokumentpfaden übereinstimmen.
+// Paths are relative to the workspace (root) so they
+// match the tab/document paths directly.
     const nodePath = root
       ? path.relative(root, full).split(path.sep).join('/')
       : full;
@@ -95,7 +95,7 @@ function cmpNodes(a, b) {
   return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
 }
 
-/* ------------------------------------------------------------- Datei-IO */
+/* ------------------------------------------------------------- File I/O */
 
 export async function readTextFile(abs) {
   const st = await fsp.stat(abs);
@@ -185,7 +185,7 @@ export function parseLog(raw, projectDir) {
 
     const fl = line.match(FILE_LINE_RE);
     if (fl) {
-      const msg = fl[3].replace(/^\s*\.?\s*$/, '') || 'Fehler';
+      const msg = fl[3].replace(/^\s*\.?\s*$/, '') || 'Error';
       issues.push({ severity: 'error', file: rel(fl[1]), line: +fl[2], message: clean(msg), raw: line });
       i++; continue;
     }
@@ -193,7 +193,7 @@ export function parseLog(raw, projectDir) {
     const er = line.match(ERR_RE);
     if (er) {
       currentErr = { severity: 'error', file: null, line: null, message: clean(er[1]), raw: line };
-      // Kontextzeilen bis l.NNN suchen
+      // Look for context lines up to l.NNN
       let j = i + 1;
       let found = null;
       while (j < lines.length && j < i + 40) {
@@ -210,9 +210,9 @@ export function parseLog(raw, projectDir) {
       const missing = currentErr.message.match(/File\s+['`\"]([^'`\"]+\.(?:sty|cls))['`\"]\s+not found/i);
       if (missing) {
         currentErr.package = path.basename(missing[1]).replace(/\.(?:sty|cls)$/i, '');
-        currentErr.fix = `Installiere „${currentErr.package}“ oder prüfe den Dateinamen.`;
+        currentErr.fix = `Install "${currentErr.package}" or check the file name.`;
       } else if (/Undefined control sequence/i.test(currentErr.message)) {
-        currentErr.fix = 'Prüfe die Schreibweise des Befehls und ob das dafür benötigte Paket eingebunden ist.';
+        currentErr.fix = 'Check the spelling of the command and whether the required package is included.';
       }
       issues.push(currentErr);
       i = found ? j + 1 : i + 1;
@@ -224,7 +224,7 @@ export function parseLog(raw, projectDir) {
     if (wl) {
       let msg = wl[3];
       let j = i + 1;
-      // "on input line N" am Ende?
+      // "on input line N" at end?
       const onLine = msg.match(/^(.*?)\s+on input line (\d+)/);
       let ln = onLine ? +onLine[2] : null;
       if (onLine) msg = onLine[1];
@@ -247,7 +247,7 @@ export function parseLog(raw, projectDir) {
       let ln = null;
       let j = i + 1;
       while (j < lines.length && j < i + 6) { const m = lines[j].match(L_LINE_RE); if (m) { ln = +m[1]; break; } j++; }
-      issues.push({ severity: 'info', file: null, line: ln, message: `Überbreites ${ob[1]}box (${ob[2]}pt zu breit)`, raw: line });
+      issues.push({ severity: 'info', file: null, line: ln, message: `Overfull ${ob[1]}box (${ob[2]}pt too wide)`, raw: line });
       i = j + 1; continue;
     }
     const ub = line.match(/^Underfull \\([hv])box/);
@@ -260,7 +260,7 @@ export function parseLog(raw, projectDir) {
     i++;
   }
 
-  // Duplikate entfernen (gleiche Datei+Zeile+Msg)
+  // Remove duplicates (same file+line+message)
   const seen = new Set();
   const uniq = [];
   for (const it of issues) {
@@ -326,31 +326,49 @@ export function parseBibFiles(absDir, recurse = true) {
 
 export function parseBib(text, source = '') {
   const out = [];
-  const re = /@(\w+)\s*\{\s*([^,\s]+)\s*,/g;
+  const re = /@(\w+)\s*[{(]\s*([^,\s]+)\s*,/g;
   let m;
   while ((m = re.exec(text))) {
-    const start = m.index;
-    // Felder bis schließende Klammer (Tiefe zählen)
-    let depth = 0, i = start + m[0].length - 1, end = text.length;
-    for (; i < text.length; i++) {
-      if (text[i] === '{') depth++;
-      else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    // Slice from the opening delimiter of the entry up to its matching
+    // delimiter so nested braces in field values stay intact.
+    const open = m.index + m[0].search(/[{(]/);
+    let depth = 0, end = text.length;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === '{' || text[i] === '(') depth++;
+      else if (text[i] === '}' || text[i] === ')') { depth--; if (depth === 0) { end = i + 1; break; } }
     }
     const body = text.slice(m.index, end);
-    const field = (name) => {
-      const f = body.match(new RegExp(`(^|[^\\w])${name}\\s*=\\s*[{"']([^}]*)}`, 'i'));
-      return f ? f[2].replace(/[{}]/g, '').replace(/\s+/g, ' ').trim() : '';
-    };
     out.push({
       key: m[2], type: m[1].toLowerCase(), source,
-      title: field('title'), author: field('author'), year: field('year'),
-      journal: field('journal') || field('booktitle') || field('publisher') || field('howpublished'),
+      title: bibField(body, 'title'), author: bibField(body, 'author'), year: bibField(body, 'year'),
+      journal: bibField(body, 'journal') || bibField(body, 'booktitle') || bibField(body, 'publisher') || bibField(body, 'howpublished'),
     });
   }
   return out;
 }
 
-/* ------------------------------------------------------------- Statistik */
+/** Reads one BibTeX field value: braced (nested), quoted, or bare. */
+export function bibField(body, name) {
+  const m = new RegExp(`(^|[^\\w])${name}\\s*=\\s*`, 'i').exec(body);
+  if (!m) return '';
+  let i = m.index + m[0].length;
+  let value = '';
+  if (body[i] === '{') {
+    let depth = 0;
+    for (; i < body.length; i++) {
+      if (body[i] === '{') { depth++; if (depth === 1) continue; }
+      else if (body[i] === '}') { depth--; if (depth === 0) break; }
+      value += body[i];
+    }
+  } else if (body[i] === '"') {
+    for (i++; i < body.length && body[i] !== '"'; i++) value += body[i];
+  } else {
+    for (; i < body.length && body[i] !== ',' && body[i] !== '\n' && body[i] !== '}'; i++) value += body[i];
+  }
+  return value.replace(/[{}]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/* ------------------------------------------------------------- Statistics */
 
 export function wordStats(text) {
   const noComments = text.replace(/(^|[^\\])%.*$/gm, '$1');
@@ -363,7 +381,7 @@ export function wordStats(text) {
   return { words, chars, charsNoSpaces, lines, paragraphs, sentences, minutes: Math.max(1, Math.round(words / 200)) };
 }
 
-/* ------------------------------------------------------- Projektstruktur */
+/* ------------------------------------------------------- Project structure */
 
 export function collectProjectFiles(absDir, showAll = false) {
   const files = [];
@@ -382,7 +400,7 @@ export function collectProjectFiles(absDir, showAll = false) {
   return files.sort();
 }
 
-/** \input/\include/graphics nachverfolgen */
+/** Track \input/\include/graphics */
 export function resolveIncludes(mainAbs, projectDir, seen = new Set()) {
   const result = new Set();
   const stack = [mainAbs];
@@ -422,7 +440,7 @@ export async function synctexView(projectDir, file, line, column = 1) {
 export async function synctexEdit(projectDir, page, x, y, file) {
   const pdf = findMainPdf(projectDir, file);
   if (!pdf) return null;
-  // synctex erwartet Koordinaten mit Ursprung oben-links
+  // synctex expects coordinates with origin top-left
   const { stdout } = await execFileP(
     'synctex', ['edit', '-o', `${page}:${x}:${y}:${pdf}`],
     { cwd: projectDir, maxBuffer: 8 * 1024 * 1024 },
@@ -440,7 +458,7 @@ function findMainPdf(projectDir, file) {
   } catch { return null; }
 }
 
-/** synctex view – erster (genauester) Trefferblock */
+/** synctex view – first (most precise) hit block */
 function parseSyncView(out, projectDir) {
   const res = { page: null, x: null, y: null, h: null, v: null, width: null, height: null };
   let inFirst = false;
@@ -448,7 +466,7 @@ function parseSyncView(out, projectDir) {
   for (const raw of String(out).split('\n')) {
     const line = raw.trim();
     if (line.startsWith('Output:')) {
-      if (seen) break;      // zweiter Block – abbrechen
+      if (seen) break;      // second block – abort
       seen = true;
       inFirst = true;
       continue;
@@ -467,7 +485,7 @@ function parseSyncView(out, projectDir) {
   return res.page ? res : null;
 }
 
-/** synctex edit – Datei + Zeile ermitteln */
+/** synctex edit – determine file + line */
 function parseSyncEdit(out, projectDir) {
   const res = { file: null, line: null, column: null, page: null };
   for (const raw of String(out).split('\n')) {

@@ -1,4 +1,4 @@
-/* Zentraler Anwendungszustand + Persistenz in localStorage */
+/* Central application state + persistence in localStorage */
 
 import { api } from './api.js';
 
@@ -16,23 +16,24 @@ export const DEFAULT_SETTINGS = {
   mainFile: 'main.tex',
   shellEscape: 'off',
   showAll: 'off',
+  autoSnapshots: 'on',
   pdfZoom: 'fit-width',
   syncMode: 'on',       // on | always | off
   sidebarWidth: 232,
   bottomHeight: 220,
-  previewWidth: 42,      // Prozent
+  previewWidth: 42,      // percent
 };
 
-/** Settings, die pro Project in .latexstudio.json gespeichert werden */
+/** Settings stored per project in .latexstudio.json */
 export const PROJECT_KEYS = ['mainFile', 'engine', 'shellEscape'];
 
 export const state = {
   app: { projects: [], engines: [], tools: {}, version: '' },
   project: null,
   settings: { ...DEFAULT_SETTINGS },
-  scopes: {},            // Project -> { mainFile, engine, ... }
+  scopes: {},            // project -> { mainFile, engine, ... }
   tabs: [],              // [{ path, name }]
-  active: null,          // aktiver Tab-Pfad
+  active: null,          // active tab path
   docs: new Map(),       // path -> { content, saved (bool), mtime }
   meta: { labels: [], bib: [], cites: [], refs: [], outline: [], stats: {}, includes: [], main: 'main.tex' },
   issues: [],
@@ -58,7 +59,7 @@ export function emit(event, data) {
   }
 }
 
-/* ------------------------------------------------------------ Persistenz */
+/* ------------------------------------------------------------ Persistence */
 
 export function loadPersisted() {
   try {
@@ -70,9 +71,9 @@ export function loadPersisted() {
       if (Array.isArray(p.tabs)) state.tabs = p.tabs.filter((t) => t && t.path);
       if (p.active) state.active = p.active;
     }
-  } catch (e) {
-    console.warn('Konnte Settings nicht laden', e);
-  }
+} catch (e) {
+      console.warn('Could not load settings', e);
+    }
   try {
     const s = JSON.parse(localStorage.getItem(SCOPE_KEY) || '{}');
     if (s && typeof s === 'object') state.scopes = s;
@@ -91,7 +92,7 @@ export function persist() {
         tabs: state.tabs,
         active: state.active,
       }));
-    } catch (e) { console.warn('Persistenz fehlgeschlagen', e); }
+    } catch (e) { console.warn('Persistence failed', e); }
   }, 250);
 }
 
@@ -99,7 +100,7 @@ function persistScopes() {
   try { localStorage.setItem(SCOPE_KEY, JSON.stringify(state.scopes)); } catch { /* */ }
 }
 
-/** Setzt die projektspezifischen Schlüssel in state.settings */
+/** Sets project-specific keys in state.settings */
 export function applyScope(project) {
   const scope = (project && state.scopes[project]) || {};
   for (const k of PROJECT_KEYS) {
@@ -115,7 +116,7 @@ function currentScope() {
 
 let scopePutTimer = null;
 
-/** Merkt sich die projektspezifischen Settings und schreibt sie auf den Server */
+/** Stores project-specific settings and writes them to the server */
 export function saveScope({ immediate = false } = {}) {
   if (!state.project) return;
   state.scopes[state.project] = currentScope();
@@ -126,7 +127,7 @@ export function saveScope({ immediate = false } = {}) {
   else scopePutTimer = setTimeout(push, 600);
 }
 
-/** Holt die Server-Konfiguration und wendet sie an (Server schlägt Cache) */
+/** Loads the server configuration and applies it (server wins over cache) */
 export async function loadScope(project) {
   if (!project) return;
   try {
@@ -145,7 +146,7 @@ export async function loadScope(project) {
       emit('settings', state.settings);
       emit('scope:changed', state.settings);
     }
-  } catch { /* Project ohne Konfiguration */ }
+  } catch { /* project without configuration */ }
 }
 
 export function setSettings(patch) {
@@ -166,8 +167,8 @@ export function setProject(name) {
 export function tabPath(path) { return state.tabs.find((t) => t.path === path); }
 
 /**
- * Pfad in die einheitliche arbeitsbereich-relative Form "Project/ordner/datei.tex".
- * Absolute Pfade bleiben unchanged.
+ * Path into the unified workspace-relative form "Project/folder/file.tex".
+ * Absolute paths remain unchanged.
  */
 export function projPath(p) {
   const s = String(p == null ? '' : p).replace(/\\/g, '/');
@@ -178,7 +179,7 @@ export function projPath(p) {
   return s;
 }
 
-/** Gegenstück zu projPath: Pfad zurück in projekt-interne Form. */
+/** Counterpart to projPath: path back into project-internal form. */
 export function projectRelPath(p) {
   const s = String(p == null ? '' : p).replace(/\\/g, '/');
   const proj = state.project;

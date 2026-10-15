@@ -198,7 +198,7 @@ export function buildOutline(files, projectDir) {
       if (lbl && stack.length) { stack[stack.length - 1].label = lbl[1]; return; }
       if (/^\\(begin\{(figure|table|algorithm)\}|bibliography|bibliographystyle|printbibliography)/.test(line)) {
         const kind = (line.match(/\\begin\{(figure|table|algorithm)\}/) || [])[1] || (line.startsWith('\\bibliography') || line.includes('printbibliography') ? 'bib' : 'env');
-        const node = { kind, level: 8, title: kind === 'bib' ? 'Literatur' : line.replace(/\\\w+\{/, '').replace(/\}$/, ''), file: rel, line: idx + 1, children: [], env: true };
+        const node = { kind, level: 8, title: kind === 'bib' ? 'Bibliography' : line.replace(/\\\w+\{/, '').replace(/\}$/, ''), file: rel, line: idx + 1, children: [], env: true };
         while (stack.length && stack[stack.length - 1].level >= 8) stack.pop();
         if (stack.length && stack[stack.length - 1].level < 8) stack[stack.length - 1].children.push(node);
         else nodes.push(node);

@@ -1,4 +1,4 @@
-/* LaTeX Studio – Bootstrapping, Layout, globale Kürzel */
+/* LaTeX Studio – Bootstrapping, Layout, global shortcuts */
 
 import { $, $$, el, clear, modal, openModal, closeModal, toast, promptDialog, debounce, flash } from './util.js';
 import { api } from './api.js';
@@ -14,7 +14,7 @@ import { initOutline } from './outline.js';
 import { initSearch } from './search.js';
 import { initSymbolPanel } from './symbols.js';
 import { initBuild, refreshMeta, buildProject } from './build.js';
-import { loadPdf, forwardSync, setZoom } from './preview.js';
+import { loadPdf, forwardSync, setZoom, zoomBy } from './preview.js';
 import { initPalette, applyTheme, openCommandPalette, openQuickOpen, showShortcuts } from './palette.js';
 import { initSettings, applySettings, syncTopbar } from './settings.js';
 import { initStatus } from './status.js';
@@ -23,9 +23,27 @@ import { applyEditorSettings } from './editor/index.js';
 import { initPackages } from './packages.js';
 import { initZotero, refreshZoteroPanel } from './zotero.js';
 import { initIcons, icon } from './icons.js';
+import { initZen, toggleZen } from './zen.js';
+import { initSnapshots, openSnapshots } from './snapshots.js';
+import { initResearch } from './research.js';
+import { initHistory } from './history.js';
+import { initMetadata } from './metadata.js';
+import { initCollab } from './collab.js';
+import { initBibliography } from './bibliography.js';
 
 loadPersisted();
 initIcons();
+
+/* Deep links: /studio?project=Name&file=chapters/intro.tex&line=42 */
+const deepLink = (() => {
+  const params = new URLSearchParams(location.search);
+  const project = params.get('project');
+  const file = params.get('file');
+  const line = parseInt(params.get('line') || '', 10);
+  if (!project) return null;
+  return { project, file: file ? file.replace(/^[\.\/]+/, '') : null, line: Number.isFinite(line) && line > 0 ? line : null };
+})();
+
 let narrowWorkspace = window.innerWidth <= 560;
 let previousWideView = 'split';
 
@@ -50,7 +68,7 @@ function applyCssVars() {
 applyTheme();
 applyCssVars();
 
-/* ------------------------------------------------------- Applikationsstand */
+/* ------------------------------------------------------- Application state */
 
 async function boot() {
   try {
@@ -58,7 +76,7 @@ async function boot() {
     state.app = app;
     window.__latexRoot = app.root;
 
-    // Project-Dropdown
+    // Project dropdown
     const sel = $('#project-select');
     clear(sel);
     for (const p of app.projects) sel.append(el('option', { value: p, text: p }));
@@ -87,7 +105,7 @@ async function boot() {
     return;
   }
 
-  // Module initialisieren
+  // Initialize modules
   initBuild();
   initTree();
   initOutline();
@@ -99,15 +117,29 @@ async function boot() {
   initProjects();
   initPackages();
   initZotero();
+  initZen();
+  initSnapshots();
+  initResearch();
+  initHistory();
+  initMetadata();
+  initCollab();
+  initBibliography();
   wireUi();
   wireEvents();
   wireKeys();
 
-  // Project wählen
+  // Select project (a deep link wins over the remembered project)
   const projects = state.app.projects || [];
-  const wanted = state.project && projects.includes(state.project) ? state.project : projects[0];
+  const linked = deepLink && projects.includes(deepLink.project) ? deepLink.project : null;
+  const wanted = linked || (state.project && projects.includes(state.project) ? state.project : projects[0]);
   if (wanted) {
-    await switchProject(wanted, { restoreTabs: true });
+    await switchProject(wanted, { restoreTabs: !linked });
+    if (linked) {
+      const path = deepLink.file ? `${linked}/${deepLink.file}` : null;
+      const target = (path && (state.files || []).includes(deepLink.file)) ? path : null;
+      if (target) await openFile(target, { line: deepLink.line, col: 1 });
+      history.replaceState(null, '', location.pathname);
+    }
   } else {
     setWelcomeVisible(true);
     setTimeout(() => emit('cmd:new-project'), 350);
@@ -120,8 +152,9 @@ async function switchProject(name, { restoreTabs = false } = {}) {
   const savedTabs = restoreTabs ? [...state.tabs] : [];
   const savedActive = state.active;
   setProject(name);
-  if (api.isBrowserWorkspace()) state.pdf = null;
-  // Projectspezifische Settings (.latexstudio.json) laden
+  // Never carry the previous project's PDF into the new one.
+  state.pdf = null;
+  // Load project-specific settings (.latexstudio.json)
   await loadScope(name);
   syncTopbar();
   $('#project-select').value = name;
@@ -136,7 +169,7 @@ async function switchProject(name, { restoreTabs = false } = {}) {
   await refreshFiles();
   await refreshMeta();
 
-  // Tabs wiederherstellen
+  // Restore tabs
   let opened = false;
   for (const t of savedTabs) {
     if ((state.files || []).includes(projectRelPath(t.path))) {
@@ -157,7 +190,7 @@ async function switchProject(name, { restoreTabs = false } = {}) {
     if (fallback) await openFile(fallback, { focus: false });
   }
 
-  // Vorhandenes PDF show
+  // Show existing PDF
   if (state.pdf?.file) {
     loadPdf(api.pdfUrl(name, state.pdf.file));
   } else {
@@ -178,7 +211,7 @@ async function refreshFiles() {
   }
 }
 
-/* ---------------------------------------------------------- UI-Verdrahtung */
+/* ---------------------------------------------------------- UI wiring */
 
 function wireUi() {
   const syncSaveState = () => {
@@ -227,6 +260,16 @@ function wireUi() {
     }
   });
   $('#btn-save').addEventListener('click', () => saveActive(true));
+  $('#btn-stats')?.addEventListener('click', () => import('./stats.js').then((m) => m.openDocumentStats()));
+  $('#btn-zen')?.addEventListener('click', () => toggleZen());
+  $('#btn-snapshots')?.addEventListener('click', () => openSnapshots());
+  $('#btn-history')?.addEventListener('click', () => import('./history.js').then((m) => m.openHistory()));
+  $('#btn-metadata')?.addEventListener('click', () => import('./metadata.js').then((m) => m.openMetadata()));
+  $('#btn-ins-table')?.addEventListener('click', () => import('./insert.js').then((m) => m.insertTableWizard()));
+  $('#btn-ins-figure')?.addEventListener('click', () => import('./insert.js').then((m) => m.insertFigureWizard()));
+  $('#btn-ins-math')?.addEventListener('click', () => import('./insert.js').then((m) => m.insertEquationWizard()));
+  $('#btn-ins-list')?.addEventListener('click', () => import('./insert.js').then((m) => m.insertListWizard()));
+  $('#btn-ins-cite')?.addEventListener('click', () => import('./insert.js').then((m) => m.insertCitationWizard()));
   $('#btn-theme').addEventListener('click', () => {
     const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     setSettings({ theme });
@@ -237,14 +280,16 @@ function wireUi() {
   $('#btn-new-project').addEventListener('click', () => emit('cmd:new-project'));
   $('#btn-export').addEventListener('click', exportProject);
 
-  /* Rail: Panel wählen; ernewter Klick klappt die Seitenleiste ein */
+  /* Rail: Choose panel; repeat click collapses sidebar */
   for (const btn of $$('.rail-btn')) {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (event) => {
       const panel = btn.dataset.panel;
       if (panel === 'shortcuts') { showShortcuts(); return; }
       const sidebar = $('#sidebar');
       const wasActive = btn.classList.contains('active');
-      const quick = wasActive && btn._lastClick && (Date.now() - btn._lastClick) < 500;
+      // Only a real pointer click twice in a row collapses the sidebar — a
+      // keyboard shortcut that activates the same panel must not hide it.
+      const quick = wasActive && event.detail > 0 && btn._lastClick && (Date.now() - btn._lastClick) < 500;
       btn._lastClick = Date.now();
       for (const b of $$('.rail-btn')) b.classList.toggle('active', b === btn);
       for (const p of $$('.panel')) p.classList.toggle('active', p.dataset.panel === panel);
@@ -258,7 +303,7 @@ function wireUi() {
     });
   }
 
-  /* Welcome-Aktionen */
+  /* Welcome actions */
   for (const b of $$('#welcome [data-action]')) {
     b.addEventListener('click', () => {
       const a = b.dataset.action;
@@ -267,6 +312,7 @@ function wireUi() {
       if (a === 'build') buildProject();
       if (a === 'palette') openCommandPalette();
       if (a === 'shortcuts') showShortcuts();
+      if (a === 'stats') import('./stats.js').then((m) => m.openDocumentStats());
     });
   }
 
@@ -291,7 +337,7 @@ function wireUi() {
     return h;
   }, (h) => setSettings({ bottomHeight: h }));
 
-  /* PDF-Toolbar */
+  /* PDF toolbar */
   $('#pdf-first').addEventListener('click', () => import('./preview.js').then((m) => m.firstPage()));
   $('#pdf-prev').addEventListener('click', () => import('./preview.js').then((m) => m.stepPage(-1)));
   $('#pdf-next').addEventListener('click', () => import('./preview.js').then((m) => m.stepPage(1)));
@@ -310,7 +356,7 @@ function wireUi() {
   $('#pdf-open').addEventListener('click', () => import('./preview.js').then((m) => m.openPdfInTab()));
   $('#pdf-download').addEventListener('click', () => import('./preview.js').then((m) => m.downloadPdf()));
 
-  /* PDF-Suche */
+  /* PDF search */
   const openSearch = () => {
     $('#pdf-searchbar').hidden = false;
     $('#pdf-search-input').focus();
@@ -344,7 +390,7 @@ function updateSyncControl() {
   const mode = state.settings.syncMode;
   button.classList.toggle('toggle', mode !== 'off');
   button.setAttribute('aria-pressed', String(mode !== 'off'));
-  button.dataset.mode = mode === 'off' ? 'Aus' : mode === 'always' ? 'Immer' : 'Ctrl+Klick';
+  button.dataset.mode = mode === 'off' ? 'Off' : mode === 'always' ? 'Always' : 'Ctrl+click';
   button.innerHTML = icon('sync') + '<span>SyncTeX</span>';
 }
 
@@ -410,10 +456,17 @@ function togglePreview() {
 function wireEvents() {
   on('cmd:toggle-preview', togglePreview);
   on('cmd:toggle-sidebar', toggleSidebar);
-  on('active-file', () => {
+  on('active-file', (path) => {
     if (window.innerWidth <= 560) {
       $('#sidebar').classList.remove('mobile-open');
       $('#btn-sidebar').setAttribute('aria-pressed', 'false');
+    }
+    if (path) {
+      try {
+        const recent = JSON.parse(localStorage.getItem('latex-recent-v1') || '[]').filter((p) => p !== path);
+        recent.unshift(path);
+        localStorage.setItem('latex-recent-v1', JSON.stringify(recent.slice(0, 30)));
+      } catch { /* */ }
     }
   });
   on('cmd:new-project', newProjectDialog);
@@ -470,12 +523,12 @@ function wireEvents() {
         setWorkspaceView(previousWideView);
       }
     }
-    // Passt sich die Seitenleiste an, muss die Breiten-Fit-Option new rechnen
+    // When sidebar adjusts, the width fit option must recalculate
     window.dispatchEvent(new Event('latex:resize'));
   }, 120));
 }
 
-/* ------------------------------------------------------ Neue Projects */
+/* ------------------------------------------------------ New projects */
 
 async function newProjectDialog() {
   let templates = [];
@@ -546,7 +599,7 @@ async function newProjectDialog() {
   $('#np-name').onkeydown = (e) => { if (e.key === 'Enter') create(); };
 }
 
-/* ------------------------------------------------------------ Tasten */
+/* ------------------------------------------------------------ Keys */
 
 function wireKeys() {
   document.addEventListener('keydown', (e) => {
@@ -581,8 +634,8 @@ function wireKeys() {
       return;
     }
     if (e.key === '\\') { e.preventDefault(); emit('cmd:toggle-preview'); return; }
-    if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom('1.25'); return; }
-    if (e.key === '-') { e.preventDefault(); setZoom('0.75'); return; }
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomBy(1.25); return; }
+    if (e.key === '-') { e.preventDefault(); zoomBy(0.8); return; }
     if (e.key === '0') { e.preventDefault(); setZoom('fit-width'); return; }
   });
 
@@ -594,7 +647,7 @@ function wireKeys() {
       e.preventDefault();
       import('./tree.js').then(async ({ }) => {
         const { promptDialog: p } = await import('./util.js');
-        // Rename über Kontextmenü des Baumes – hier nur Hinweis
+        // Rename via file tree context menu – just a hint here
         toast('To rename, right-click in the file tree', { type: 'ok', ms: 2200 });
         void p;
       });
@@ -610,7 +663,7 @@ function goLineDialog() {
   });
 }
 
-/* --------------------------------------------------------------- Start */
+/* --------------------------------------------------------------- Startup */
 
 boot().catch((e) => {
   console.error(e);

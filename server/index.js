@@ -47,8 +47,8 @@ const projectDir = (req) => {
 const PROJECT_NAME_RE = /^[\w\-. ÄÖÜäöü()+ ]{1,80}$/;
 
 /**
- * Dateiangabe des Clients (relativ, projekt-relativ oder arbeitsbereich-relativ
- * wie "Projekt/unter/ordner.tex") in einen projekt-internen Pfad umwandeln.
+ * Convert a file reference from the client (relative, project-relative, or
+ * workspace-relative like "Project/sub/folder.tex") into a project-internal path.
  */
 function projectRel(dir, file) {
   const s = String(file == null ? '' : file).replace(/\\/g, '/').replace(/^\.\//, '');
@@ -82,7 +82,7 @@ function projectFile(dir, file) {
   return { abs, relative: path.relative(dir, abs).split(path.sep).join('/') };
 }
 
-/** Validierter Projektname -> absoluter Pfad (direkt unterhalb des Arbeitsbereichs) */
+/** Validated project name -> absolute path (directly under the workspace) */
 function projectPath(name, { mustExist = true } = {}) {
   const n = String(name || '').trim();
   if (!PROJECT_NAME_RE.test(n) || n === '.' || n === '..') {
@@ -102,10 +102,10 @@ function conflict(msg) { throw Object.assign(new Error(msg), { status: 409 }); }
 
 async function listProjects() {
   const entries = await fsp.readdir(WORKSPACE, { withFileTypes: true });
-  return entries.filter((d) => d.isDirectory()).map((d) => d.name).sort((a, b) => a.localeCompare(b, 'de'));
+  return entries.filter((d) => d.isDirectory()).map((d) => d.name).sort((a, b) => a.localeCompare(b, 'en'));
 }
 
-/* ------------------------------------------------------------ Zustand */
+/* ------------------------------------------------------------ State */
 
 let TOOLS = {};
 async function refreshTools() { TOOLS = await toolchain(); }
@@ -128,7 +128,7 @@ app.get('/api/state', wrap(async (req, res) => {
   });
 }));
 
-/* ---------------------------------------------------------- Dateibaum */
+/* ---------------------------------------------------------- File tree */
 
 app.get('/api/tree', wrap(async (req, res) => {
   const base = req.query.path ? resolve(req.query.path) : WORKSPACE;
@@ -243,7 +243,7 @@ app.get('/api/templates', wrap(async (req, res) => {
     let meta = { name: d.name, title: d.name, description: '' };
     try {
       const json = JSON.parse(await fsp.readFile(path.join(TEMPLATES_DIR, d.name, 'template.json'), 'utf8'));
-      // name ist der Verzeichnis-Identifier und darf nicht überschrieben werden
+      // name is the directory identifier and must not be overwritten
       meta = { ...meta, ...json, name: d.name };
     } catch { /* */ }
     out.push(meta);
@@ -251,7 +251,7 @@ app.get('/api/templates', wrap(async (req, res) => {
   res.json({ templates: out });
 }));
 
-/* ------------------------------------------------------ TeX-Paketverwaltung */
+/* ------------------------------------------------------ TeX package management */
 
 function packageDeclarations(file, source) {
   const clean = String(source)
@@ -301,7 +301,7 @@ app.get('/api/packages', wrap(async (req, res) => {
   });
 }));
 
-/* ------------------------------------------------------ Literaturimport */
+/* ------------------------------------------------------ Bibliography import */
 function bibEntries(source) {
   const text = String(source || '');
   const entries = [];
@@ -361,7 +361,7 @@ app.post('/api/bibliography/merge', wrap(async (req, res) => {
   res.json({ ok: true, file: target.relative, added: added.length, updated: updateExisting ? updates.length : 0, unchanged: updateExisting ? 0 : updates.length, updateCandidates: updates.length, duplicateInput: parsedIncoming.length - incoming.length, keys: added.map((entry) => entry.key) });
 }));
 
-/* ------------------------------ GitHub: öffentliche Projekte importieren */
+/* ------------------------------ GitHub: import public repositories */
 app.post('/api/github/import', wrap(async (req, res) => {
   const url = String(req.body?.url || '').trim();
   let parsed;
@@ -401,7 +401,7 @@ app.post('/api/github/import', wrap(async (req, res) => {
   const strip = tops.size === 1 && files.some((file) => file.name.includes('/')) ? [...tops][0] + '/' : '';
   if (files.length > 5000) throw Object.assign(new Error('Repository contains more than 5,000 files.'), { status: 413 });
   const expandedSize = files.reduce((sum, file) => sum + Number(file._data?.uncompressedSize || 0), 0);
-  if (expandedSize > 200 * 1024 * 1024) throw Object.assign(new Error('Entpackter Repository-Inhalt ist größer als 200 MB.'), { status: 413 });
+  if (expandedSize > 200 * 1024 * 1024) throw Object.assign(new Error('Extracted repository content is larger than 200 MB.'), { status: 413 });
   let totalBytes = 0, written = 0;
   try {
     await fsp.mkdir(target, { recursive: false });
@@ -413,7 +413,7 @@ app.post('/api/github/import', wrap(async (req, res) => {
       if (!abs.startsWith(target + path.sep) || isArtifact(path.basename(abs)) || path.basename(abs) === '.git') continue;
       const content = await entry.async('nodebuffer');
       totalBytes += content.length;
-      if (totalBytes > 200 * 1024 * 1024) throw Object.assign(new Error('Entpackter Repository-Inhalt ist größer als 200 MB.'), { status: 413 });
+      if (totalBytes > 200 * 1024 * 1024) throw Object.assign(new Error('Extracted repository content is larger than 200 MB.'), { status: 413 });
       await fsp.mkdir(path.dirname(abs), { recursive: true });
       await fsp.writeFile(abs, content, { flag: 'wx' });
       written++;
@@ -445,7 +445,7 @@ app.post('/api/packages/install', wrap(async (req, res) => {
         try {
           await execFileP('tlmgr', ['init-usertree'], { timeout: 30000, maxBuffer: 1024 * 1024 });
           ({ stdout, stderr } = await execFileP('tlmgr', ['--usermode', 'install', name], { timeout: 300000, maxBuffer: 4 * 1024 * 1024 }));
-          stderr = ['Im persönlichen TeX-Live-Paketbaum installiert.', stderr].filter(Boolean).join('\n');
+          stderr = ['Installed in the personal TeX Live package tree.', stderr].filter(Boolean).join('\n');
         } catch (userError) {
           const detail = [userError.stderr, userError.stdout, userError.message].filter(Boolean).join('\n');
           throw Object.assign(new Error(detail), { stderr: detail });
@@ -474,7 +474,7 @@ app.post('/api/project', wrap(async (req, res) => {
   try { tplMeta = JSON.parse(await fsp.readFile(path.join(tplDir, 'template.json'), 'utf8')); } catch { /* */ }
   await fsp.cp(tplDir, target, { recursive: true });
   await fsp.rm(path.join(target, 'template.json'), { force: true });
-  // Projektscope aus der Vorlage anlegen (Hauptdatei/Engine)
+  // Create project scope from template (main file/engine)
   const scope = {};
   if (tplMeta.main) scope.mainFile = String(tplMeta.main);
   if (tplMeta.engine) scope.engine = String(tplMeta.engine);
@@ -485,7 +485,7 @@ app.post('/api/project', wrap(async (req, res) => {
   res.json({ ok: true, project: name });
 }));
 
-/* ------------------------------------------------- Projektverwaltung */
+/* ------------------------------------------------- Project management */
 
 const releaseBuild = (dir) => {
   const job = builds.jobs.get(dir);
@@ -504,7 +504,7 @@ app.post('/api/project/rename', wrap(async (req, res) => {
 
 app.post('/api/project/duplicate', wrap(async (req, res) => {
   const from = projectPath(req.body?.name);
-  const base = String(req.body?.to || '').trim() || path.basename(from) + ' (Kopie)';
+  const base = String(req.body?.to || '').trim() || path.basename(from) + ' (copy)';
   const to = projectPath(base, { mustExist: false });
   if (fs.existsSync(to)) conflict('Project already exists: ' + path.basename(to));
   await fsp.cp(from, to, {
@@ -518,7 +518,7 @@ app.post('/api/project/duplicate', wrap(async (req, res) => {
 const TRASH_DIR = path.join(APP_ROOT, '.trash');
 const TRASH_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Projekt in den Papierkorb verschieben statt endgültig löschen. */
+/** Move project to trash instead of permanently deleting. */
 async function trashProject(abs) {
   await fsp.mkdir(TRASH_DIR, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -529,7 +529,7 @@ async function trashProject(abs) {
     await fsp.cp(abs, target, { recursive: true });
     await fsp.rm(abs, { recursive: true, force: true });
   }
-  // Einträge älter als 30 Tage entfernen
+  // Remove entries older than 30 days
   try {
     const now = Date.now();
     for (const e of await fsp.readdir(TRASH_DIR, { withFileTypes: true })) {
@@ -562,7 +562,7 @@ app.post('/api/project/import', wrap(async (req, res) => {
   const names = Object.values(zip.files).filter((f) => !f.dir).map((f) => f.name);
   if (!names.length) throw Object.assign(new Error('ZIP archive is empty'), { status: 400 });
 
-  // Enthält das Archiv einen einzigen oberen Ordner, wird dieser entfernt
+  // If the archive contains a single top-level folder, it is stripped
   const tops = new Set(names.map((n) => n.split('/').filter(Boolean)[0]));
   const flat = tops.size === 1 && names.some((n) => n.includes('/'));
   const strip = flat ? [...tops][0] + '/' : '';
@@ -584,7 +584,7 @@ app.post('/api/project/import', wrap(async (req, res) => {
   res.json({ ok: true, project: path.basename(target), files: count });
 }));
 
-/* ------------------------------------------- Projekt-Konfiguration */
+/* ------------------------------------------- Project configuration */
 
 const CONFIG_NAME = '.latexstudio.json';
 
@@ -611,7 +611,7 @@ app.put('/api/project/config', wrap(async (req, res) => {
   res.json({ ok: true, config: allowed });
 }));
 
-/* ------------------------------------------------------- Demo-Projekte */
+/* ------------------------------------------------------- Demo projects */
 
 const DEMOS_DIR = path.join(APP_ROOT, 'demos');
 
@@ -640,9 +640,9 @@ app.post('/api/demo', wrap(async (req, res) => {
   const created = [];
   const skipped = [];
   for (const name of wanted) {
-    if (!dirs.includes(name)) { skipped.push({ name, reason: 'unbekannt' }); continue; }
+    if (!dirs.includes(name)) { skipped.push({ name, reason: 'unknown' }); continue; }
     const target = projectPath(name, { mustExist: false });
-    if (fs.existsSync(target)) { skipped.push({ name, reason: 'existiert' }); continue; }
+    if (fs.existsSync(target)) { skipped.push({ name, reason: 'exists' }); continue; }
     await fsp.cp(path.join(DEMOS_DIR, name), target, { recursive: true });
     await fsp.rm(path.join(target, 'demo.json'), { force: true });
     await cleanArtifacts(target);
@@ -651,7 +651,7 @@ app.post('/api/demo', wrap(async (req, res) => {
   res.json({ ok: true, created, skipped, projects: await listProjects() });
 }));
 
-/* --------------------------------------------- Projektweite Ersetzung */
+/* --------------------------------------------- Project-wide replace */
 
 app.post('/api/replace', wrap(async (req, res) => {
   const dir = projectDir(req);
@@ -704,7 +704,7 @@ app.post('/api/replace', wrap(async (req, res) => {
   res.json({ ok: true, count, files: changed });
 }));
 
-/** Entfernt Build-Artefakte aus einem frisch kopierten Projekt */
+/** Remove build artifacts from a freshly copied project */
 async function cleanArtifacts(dir) {
   const entries = await fsp.readdir(dir, { withFileTypes: true }).catch(() => []);
   for (const e of entries) {
@@ -714,7 +714,7 @@ async function cleanArtifacts(dir) {
   }
 }
 
-/* ------------------------------------------------------------- Bauen */
+/* ------------------------------------------------------------- Build */
 
 app.post('/api/build', wrap(async (req, res) => {
   const dir = projectDir(req);
@@ -778,14 +778,14 @@ app.get('/api/synctex', wrap(async (req, res) => {
   }
 }));
 
-/* ------------------------------------------------------- Projektdaten */
+/* ------------------------------------------------------- Project data */
 
 app.get('/api/projects/files', wrap(async (req, res) => {
   const dir = projectDir(req);
   res.json({ files: collectProjectFiles(dir, req.query.all === '1') });
 }));
 
-/* --------------------------------------------------------- Projektsuche */
+/* --------------------------------------------------------- Project search */
 
 app.post('/api/search', wrap(async (req, res) => {
   const dir = projectDir(req);
@@ -835,7 +835,7 @@ app.get('/studio', (req, res) => res.sendFile(path.join(CLIENT, 'studio.html')))
 app.get('/studio/', (req, res) => res.redirect(302, '/studio'));
 app.get('/', (req, res) => res.sendFile(path.join(CLIENT, 'index.html')));
 
-// SPA-Fallback ist nicht nötig – reine Single-Page-App.
+// SPA fallback not needed – pure single-page app.
 
 /* --------------------------------------------------------------- WS */
 
@@ -849,10 +849,59 @@ function broadcast(msg) {
   }
 }
 
+function presenceUsers(project) {
+  const users = new Map();
+  for (const client of wss.clients) {
+    if (client.collab?.project === project && client.collab.user) {
+      users.set(client.collab.user, (users.get(client.collab.user) || 0) + 1);
+    }
+  }
+  return [...users.entries()].map(([user, tabs]) => ({ user, tabs }));
+}
+
+function broadcastPresence(project) {
+  if (!project) return;
+  const data = JSON.stringify({ type: 'presence', project, users: presenceUsers(project) });
+  for (const client of wss.clients) {
+    if (client.readyState === 1 && client.collab?.project === project) client.send(data);
+  }
+}
+
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
+  ws.collab = { project: null, user: null };
   ws.send(JSON.stringify({ type: 'hello', tools: TOOLS }));
+
+  // Collaboration: presence and live file sync within one project.
+  ws.on('message', (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw.toString()); } catch { return; }
+    if (msg.type === 'hello' && typeof msg.project === 'string') {
+      ws.collab = {
+        project: msg.project.slice(0, 120),
+        user: String(msg.user || 'Guest').slice(0, 40),
+      };
+      broadcastPresence(ws.collab.project);
+    } else if (msg.type === 'file:save' && ws.collab.project
+      && typeof msg.path === 'string' && typeof msg.content === 'string') {
+      if (msg.content.length > 2_000_000) return;
+      for (const client of wss.clients) {
+        if (client !== ws && client.readyState === 1 && client.collab?.project === ws.collab.project) {
+          client.send(JSON.stringify({
+            type: 'file:save',
+            path: String(msg.path).slice(0, 500),
+            content: msg.content,
+            user: ws.collab.user,
+          }));
+        }
+      }
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.collab?.project) broadcastPresence(ws.collab.project);
+  });
 });
 
 setInterval(() => {

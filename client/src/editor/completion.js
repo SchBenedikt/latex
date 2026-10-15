@@ -1,4 +1,4 @@
-/* Autocomplete: Befehle, Umgebungen, Labels, Zitate, files, Math-Symbole */
+/* Autocomplete: Commands, Environments, Labels, Citations, Files, Math Symbols */
 
 import { snippetCompletion } from '@codemirror/autocomplete';
 import { COMMANDS, ENVIRONMENTS, DOC_SNIPPETS, SYMBOLS } from './catalog.js';
@@ -14,7 +14,7 @@ for (const e of ENVIRONMENTS) {
 }
 for (const [, [display, latex]] of SYMBOLS.map((s) => s.items)) {
   if (!latex.startsWith('\\')) continue;
-  cmdIndex.push({ label: latex, detail: display, type: 'constant', section: 'Symbole' });
+  cmdIndex.push({ label: latex, detail: display, type: 'constant', section: 'Symbols' });
 }
 
 const symbolNames = SYMBOLS.flatMap((s) => s.items)
@@ -32,7 +32,7 @@ export function inMath(doc, pos) {
   return dollars % 2 === 1 || open > 0 || block > 0;
 }
 
-/* --------------------------------------------------------- Quellen-Router */
+/* --------------------------------------------------------- Source Router */
 
 export function latexCompletion(context) {
   const { pos, state: st, explicit } = context;
@@ -77,7 +77,7 @@ export function latexCompletion(context) {
       boost: cites.includes(b.key) ? 6 : 0,
     }));
     if (!opts.length && cites.length) {
-      for (const c of cites) opts.push({ label: c, detail: 'aus .aux', type: 'text' });
+      for (const c of cites) opts.push({ label: c, detail: 'from .aux', type: 'text' });
     }
     return { from: pos - typed.length, options: opts, validFor: /^[\w:.\-]*$/ };
   }
@@ -91,7 +91,7 @@ export function latexCompletion(context) {
     for (const l of state.meta.auxLabels || []) if (!seen.has(l.name)) seen.set(l.name, l);
     const opts = [...seen.values()].map((l) => ({
       label: l.name,
-      detail: l.number ? `Nr. ${l.number} (S. ${l.page || '?'})` : (l.file ? l.file + ':' + (l.line || '?') : 'Label'),
+      detail: l.number ? `No. ${l.number} (p. ${l.page || '?'})` : (l.file ? l.file + ':' + (l.line || '?') : 'Label'),
       type: 'reference',
       boost: (state.meta.refs || []).includes(l.name) ? 5 : 0,
     }));
@@ -118,7 +118,7 @@ export function latexCompletion(context) {
     return { from: pos - typed.length, options: opts, validFor: /^[\w./\-]*$/ };
   }
 
-  /* Nach Befehlspräfix */
+  /* After command prefix */
   const cmdPrefix = before.match(/\\[a-zA-Z@]*$/);
   if (cmdPrefix) {
     const from = pos - cmdPrefix[0].length;
@@ -128,7 +128,7 @@ export function latexCompletion(context) {
     return { from, options: opts, validFor: /^\\[\w@]*$/ };
   }
 
-  /* Mathe: nackte Wörter wie "alpha" → \alpha */
+  /* Math: bare words like "alpha" → \alpha */
   if (inMath(st.doc, pos) && word && word.from < pos) {
     const typed = word.text;
     if (/^[a-zA-Z][a-zA-Z]*$/.test(typed) && typed.length >= 2) {
@@ -140,7 +140,7 @@ export function latexCompletion(context) {
     }
   }
 
-  /* Explizit (Strg+Leertaste): Dokumentsnippets anbieten */
+  /* Explicit (Ctrl+Space): offer document snippets */
   if (explicit) {
     const from = word ? word.from : pos;
     const opts = DOC_SNIPPETS.map((s) =>
@@ -172,7 +172,7 @@ function escape(s) {
   return String(s || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 }
 
-/* ------------------------------------------------------ Befehlsübersicht */
+/* ------------------------------------------------------ Command overview */
 
 export function commandSections() {
   const map = new Map();

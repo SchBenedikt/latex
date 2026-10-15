@@ -6,7 +6,7 @@
   <title>LaTeX Studio</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="/styles/app.css?v=studio-4" />
-  <link rel="stylesheet" href="/styles/workspace.css?v=studio-6" />
+  <link rel="stylesheet" href="/styles/workspace.css?v=studio-8" />
 </head>
 <body>
 <div id="app" class="layout">
@@ -49,11 +49,22 @@
           <button id="btn-save" class="tb-btn" data-icon="save" data-icon-label="Save" title="Save (Ctrl+S)"></button>
           <button id="btn-console" class="tb-btn" data-icon="terminal" data-icon-label="Show console" title="Toggle console (Ctrl+J)"></button>
           <button id="btn-preview" class="tb-btn" data-icon="eye" data-icon-label="Toggle PDF preview" title="Toggle PDF preview"></button>
+          <button id="btn-stats" class="tb-btn" data-icon="list" data-icon-label="Document statistics" title="Document statistics"></button>
+          <button id="btn-zen" class="tb-btn" data-icon="eye" data-icon-label="Focus mode" title="Focus mode (Alt+Z)"></button>
+          <hr/><span class="menu-heading">Insert</span>
+          <button id="btn-ins-table" class="tb-btn" data-icon="plus" data-icon-label="Insert table" title="Insert table"></button>
+          <button id="btn-ins-figure" class="tb-btn" data-icon="image" data-icon-label="Insert figure" title="Insert figure"></button>
+          <button id="btn-ins-math" class="tb-btn" data-icon="symbols" data-icon-label="Insert math" title="Insert math"></button>
+          <button id="btn-ins-list" class="tb-btn" data-icon="list" data-icon-label="Insert list" title="Insert list"></button>
+          <button id="btn-ins-cite" class="tb-btn" data-icon="book" data-icon-label="Insert citation" title="Insert citation"></button>
           <hr/><span class="menu-heading">Project</span>
           <button id="btn-new-project" class="tb-btn" data-icon="plus" data-icon-label="New project" title="Create a new project"></button>
           <button id="btn-export" class="tb-btn" data-icon="download" data-icon-label="Export project" title="Export project as ZIP"></button>
           <button id="btn-import" class="tb-btn" data-icon="folder" data-icon-label="Import project" title="Import project from ZIP"></button>
           <button id="btn-demos" class="tb-btn" data-icon="book" data-icon-label="Sample projects" title="Add sample projects"></button>
+          <button id="btn-snapshots" class="tb-btn" data-icon="save" data-icon-label="Snapshots" title="Project snapshots"></button>
+          <button id="btn-history" class="tb-btn" data-icon="edit" data-icon-label="Change history" title="Change history: saved versions, snapshots, imports"></button>
+          <button id="btn-metadata" class="tb-btn" data-icon="note" data-icon-label="Document metadata" title="Edit title, author, date and PDF metadata"></button>
           <hr/><span class="menu-heading">Workspace</span>
           <button id="btn-settings" class="tb-btn" data-icon="settings" data-icon-label="Settings" title="Settings"></button>
           <button id="btn-theme" class="tb-btn" data-icon="theme" data-icon-label="Toggle light/dark theme" title="Change theme"></button>
@@ -81,7 +92,9 @@
         <button class="rail-btn" data-panel="symbols" title="Symbols" data-icon="symbols">
           <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 4 7v10l8 5 8-5V7l-8-5Zm0 2.3 5.7 3.56v7.28L12 19.7l-5.7-3.56V7.86L12 4.3Zm-1 4.2v2H8v1.5h3v2h1.5v-2h3V10.5h-3v-2H11Z"/></svg>
         </button>
+        <button class="rail-btn" data-panel="bibliography" title="Bibliography (Alt+B)" data-icon="bib"></button>
         <button class="rail-btn" data-panel="sources" title="Zotero sources" data-icon="book"></button>
+        <button class="rail-btn" data-panel="research" title="Research: goals, tasks, notes (Alt+T)" data-icon="check"></button>
 </nav>
 
       <div id="panels">
@@ -107,7 +120,8 @@
 
         <!-- Outline -->
         <section class="panel" data-panel="outline">
-          <header class="panel-head"><span>Outline</span></header>
+          <header class="panel-head"><span>Outline</span><div class="panel-actions"><button id="outline-sync" class="tb-btn" title="Show the current position" aria-label="Show the current position" data-icon="target"></button><button id="outline-collapse-all" class="tb-btn" title="Collapse all sections" aria-label="Collapse all sections">−</button><button id="outline-expand-all" class="tb-btn" title="Expand all sections" aria-label="Expand all sections">+</button></div></header>
+          <div class="search-form"><input type="search" id="outline-filter" placeholder="Filter outline …" aria-label="Filter outline" /></div>
           <div id="outline" class="panel-body"></div>
         </section>
 
@@ -141,6 +155,19 @@
           <div id="symbol-grid" class="panel-body symbol-grid"></div>
         </section>
 
+        <!-- Bibliography manager -->
+        <section class="panel" data-panel="bibliography">
+          <header class="panel-head"><span>Bibliography</span><div class="panel-actions"><button id="bib-refresh" title="Rescan citations" aria-label="Rescan citations" data-icon="refresh"></button></div></header>
+          <div class="search-form">
+            <input type="search" id="bib-filter" placeholder="Filter by key, title or author …" aria-label="Filter bibliography" />
+            <div id="bib-types" class="chip-row"></div>
+            <div id="bib-status" class="chip-row"></div>
+            <div id="bib-summary" class="search-stats"></div>
+          </div>
+          <div id="bib-missing" class="bib-missing" hidden></div>
+          <div id="bib-list" class="panel-body bib-list"></div>
+        </section>
+
         <!-- Zotero library -->
         <section class="panel" data-panel="sources">
           <header class="panel-head"><span>Zotero library</span><div class="panel-actions"><button id="zotero-sync" title="Sync now" aria-label="Sync now" data-icon="refresh"></button><button id="zotero-settings-open" title="Zotero connection settings" aria-label="Zotero connection settings" data-icon="settings"></button></div></header>
@@ -149,6 +176,27 @@
           <label class="zotero-collection-wrap"><span class="sr-only">Collection</span><select id="zotero-collection" aria-label="Filter by collection"><option value="">All collections</option></select></label>
           <div id="zotero-source-list" class="panel-body zotero-source-list"></div>
           <button id="zotero-connect-open" class="zotero-connect-action">Connect Zotero</button>
+        </section>
+
+        <!-- Research: goals, tasks, notes -->
+        <section class="panel" data-panel="research">
+          <header class="panel-head"><span>Research</span><div class="panel-actions"><button id="research-refresh" title="Refresh tasks" aria-label="Refresh tasks" data-icon="refresh"></button></div></header>
+          <div class="panel-body research-body">
+            <div class="research-group">
+              <div class="research-label"><span>Word goal</span><button id="goal-set" class="link-btn">Set goal</button></div>
+              <div class="goal-bar" role="progressbar" aria-label="Word goal progress"><i id="goal-fill"></i></div>
+              <div id="goal-text" class="research-hint">No goal yet — set one to track this paper.</div>
+            </div>
+            <div class="research-group">
+              <div class="research-label"><span>Tasks</span><span id="task-count" class="research-hint"></span></div>
+              <div id="task-filters" class="chip-row"></div>
+              <div id="task-list" class="task-list"></div>
+            </div>
+            <div class="research-group research-notes">
+              <div class="research-label"><span>Notes</span><span id="notes-count" class="research-hint"></span></div>
+              <textarea id="research-notes" placeholder="Ideas, outlines, reviewer replies… (saved in this browser, per project)" aria-label="Project research notes"></textarea>
+            </div>
+          </div>
         </section>
       </div>
 
@@ -163,19 +211,21 @@
       <div id="welcome" class="welcome">
         <div class="welcome-card">
           <h1>LaTeX Studio</h1>
-          <p>A local LaTeX editor with a live preview, SyncTeX, and autocomplete.</p>
+          <p>A calm LaTeX editor with live preview, SyncTeX, and autocomplete.</p>
           <div class="welcome-actions">
             <button data-action="new-project">New project</button>
             <button data-action="demos">Sample projects <kbd>★</kbd></button>
             <button data-action="build">Build project <kbd>Ctrl+B</kbd></button>
             <button data-action="palette">Command palette <kbd>Ctrl+Shift+P</kbd></button>
             <button data-action="shortcuts">Keyboard shortcuts <kbd>F1</kbd></button>
+            <button data-action="stats">Document statistics</button>
           </div>
           <ul class="welcome-tips">
             <li><b>Ctrl+click</b> in the PDF → jump to source (SyncTeX)</li>
             <li><b>Ctrl+Shift+G</b> → jump to the current line in the preview</li>
             <li><b>Ctrl+Space</b> → autocomplete, <b>Ctrl+E</b> → environments</li>
-            <li><b>Project menu ⋯</b> → rename, duplicate, import or export ZIP</li>
+            <li><b>Alt+Z</b> → focus mode, <b>click the word count</b> → document statistics</li>
+            <li><b>Project menu ⋯</b> → rename, duplicate, snapshots, import or export ZIP</li>
           </ul>
         </div>
       </div>
@@ -212,7 +262,7 @@
             <hr/>
             <button class="tb-btn" id="pdf-zoom-out" title="Zoom out" data-icon="minus" data-icon-label="Zoom out"></button>
             <button class="tb-btn" id="pdf-zoom-in" title="Zoom in" data-icon="plus" data-icon-label="Zoom in"></button>
-            <button class="tb-btn" id="pdf-sync-toggle" title="SyncTeX: Klick im PDF springt in den Source" data-icon="sync" data-icon-label="SyncTeX"></button>
+            <button class="tb-btn" id="pdf-sync-toggle" title="SyncTeX: click in the PDF to jump to the source" data-icon="sync" data-icon-label="SyncTeX"></button>
             <hr/>
             <button class="tb-btn" id="pdf-open" title="Open PDF in a new tab" data-icon="external" data-icon-label="Open in new tab"></button>
             <button class="tb-btn" id="pdf-download" title="Download PDF" data-icon="download" data-icon-label="Download PDF"></button>
@@ -259,6 +309,7 @@
   <!-- ========================================================== STATUSBAR -->
   <footer id="statusbar">
     <span id="st-project" class="st-item" title="Active project"></span>
+    <span id="st-collab" class="st-item st-btn" title="Collaborators" hidden></span>
     <span id="st-build" class="st-item st-btn" title="Build status"></span>
     <span id="st-issues" class="st-item st-btn" title="Show problems"></span>
     <div class="tb-flex"></div>
@@ -297,7 +348,7 @@
       <div class="modal-actions zotero-detail-actions"><a id="zotero-open-web" class="tb-btn" target="_blank" rel="noopener noreferrer">Open in Zotero</a><button id="zotero-copy-bib" class="tb-btn">Copy BibTeX</button><button id="zotero-add-bib" class="tb-btn primary">Add to project bibliography</button><label class="zotero-citation-choice">Citation <select id="zotero-citation-command" aria-label="Citation command"><option value="cite">Basic</option><option value="citep">Parenthetical</option><option value="citet">Textual</option><option value="parencite">biblatex parenthetical</option><option value="textcite">biblatex textual</option><option value="autocite">biblatex automatic</option></select></label><button id="zotero-insert-cite" class="tb-btn">Insert citation</button></div>
     </div>
   </div>
-  <!-- Project neu -->
+  <!-- New project -->
   <div class="modal" data-modal="new-project">
     <div class="modal-card">
       <h2>New project</h2>
@@ -328,6 +379,57 @@
         <button class="tb-btn" data-close>Cancel</button>
         <button class="tb-btn primary" id="demo-create">Create selected</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Document statistics -->
+  <div class="modal" data-modal="stats">
+    <div class="modal-card">
+      <h2>Document statistics</h2>
+      <p class="modal-intro">Live counts for the active file, without comments.</p>
+      <div id="stats-grid" class="stats-grid"></div>
+      <div class="modal-actions"><button class="tb-btn primary" data-close>Done</button></div>
+    </div>
+  </div>
+
+  <!-- Snapshots -->
+  <div class="modal" data-modal="snapshots">
+    <div class="modal-card wide">
+      <h2>Project snapshots</h2>
+      <p class="modal-intro">Capture text files in this browser before a rewrite, and restore them later. Snapshots never leave this device.</p>
+      <div class="snapshot-bar"><span id="snapshot-count" class="muted"></span><span class="tb-flex"></span><button id="snapshot-create" class="tb-btn primary">Create snapshot</button></div>
+      <div id="snapshot-list" class="snapshot-list"></div>
+      <div class="modal-actions"><button class="tb-btn primary" data-close>Done</button></div>
+    </div>
+  </div>
+
+  <!-- Document metadata -->
+  <div class="modal" data-modal="metadata">
+    <div class="modal-card">
+      <h2>Document metadata</h2>
+      <p class="modal-intro">Title, author and date are written to <b id="meta-file">main.tex</b>; subject and keywords become the PDF metadata through hyperref. Rebuild to apply.</p>
+      <div class="settings-grid">
+        <label class="field"><span>Title</span><input type="text" id="meta-title" placeholder="A Clear Argument" /></label>
+        <label class="field"><span>Author</span><input type="text" id="meta-author" placeholder="Author Name" /></label>
+        <label class="field"><span>Date</span><input type="text" id="meta-date" placeholder="\today" /></label>
+        <label class="field"><span>PDF subject</span><input type="text" id="meta-subject" placeholder="Short description of the document" /></label>
+        <label class="field"><span>PDF keywords</span><input type="text" id="meta-keywords" placeholder="latex, writing, research" /></label>
+      </div>
+      <div class="modal-actions">
+        <button class="tb-btn" data-close>Cancel</button>
+        <button class="tb-btn primary" id="meta-save">Save metadata</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change history -->
+  <div class="modal" data-modal="history">
+    <div class="modal-card wide">
+      <h2>Change history</h2>
+      <p class="modal-intro">Saves, snapshots, builds and imports of this project. Restore any saved version — everything stays in this browser.</p>
+      <div class="snapshot-bar"><span id="history-count" class="muted"></span><span class="tb-flex"></span><button id="history-clear" class="tb-btn danger">Clear history</button></div>
+      <div id="history-list" class="history-list"></div>
+      <div class="modal-actions"><button class="tb-btn primary" data-close>Done</button></div>
     </div>
   </div>
 
@@ -370,6 +472,9 @@
           <label class="field"><span>Generated auxiliary files</span>
           <select id="set-showall"><option value="off">Hide</option><option value="on">Show</option></select>
         </label>
+          <label class="field"><span>Automatic snapshots</span>
+          <select id="set-autosnapshots"><option value="on">On (quiet, every 20 min)</option><option value="off">Off</option></select>
+        </label>
         </div></fieldset>
         <fieldset class="settings-section"><legend>PDF and SyncTeX</legend><div class="settings-grid">
           <label class="field"><span>Default PDF zoom</span>
@@ -410,7 +515,7 @@
     </div>
   </div>
 
-  <!-- Hilfe / Keyboard shortcuts -->
+  <!-- Help / keyboard shortcuts -->
   <div class="modal" data-modal="shortcuts">
     <div class="modal-card wide">
       <h2>Keyboard shortcuts &amp; features</h2>
@@ -477,6 +582,6 @@
 <div id="toasts"></div>
 <div id="sync-flash" class="hidden"></div>
 
-<script src="/dist/app.js?v=studio-10"></script>
+<script src="/dist/app.js?v=studio-12"></script>
 </body>
 </html>

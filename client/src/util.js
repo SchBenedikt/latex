@@ -1,4 +1,4 @@
-/* Kleine DOM- und Helfer-Bibliothek ohne Framework */
+/* Small DOM and helper library without framework */
 import { icon, menuIcon } from './icons.js';
 
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -13,6 +13,12 @@ export function el(tag, attrs = {}, ...children) {
     else if (k === 'text') node.textContent = v;
     else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
     else if (k === 'dataset') Object.assign(node.dataset, v);
+    else if (k === 'style' && typeof v === 'object') {
+      for (const [prop, val] of Object.entries(v)) {
+        if (prop.startsWith('--')) node.style.setProperty(prop, String(val));
+        else node.style[prop] = val;
+      }
+    }
     else if (k in node && k !== 'list' && typeof v !== 'object') node[k] = v;
     else node.setAttribute(k, v);
   }
@@ -64,7 +70,7 @@ export function fmtDuration(ms) {
   return (ms / 1000).toFixed(1) + ' s';
 }
 
-/** Einfacher Fuzzy-Matcher: liefert Score + Matchindizes */
+/** Simple fuzzy matcher: returns score + match indices */
 export function fuzzy(query, target) {
   const q = query.toLowerCase(), t = target.toLowerCase();
   if (!q) return { score: 0, idx: [] };
@@ -199,7 +205,7 @@ export function promptDialog(title, label = '', value = '', placeholder = '') {
   const handler = () => closeModal(input.value);
   ok.onclick = handler;
   input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); handler(); } };
-  // Rückgabe ist entscheidend: alle Aufrufer warten auf den Wert
+  // The return value matters: all callers wait for the value
   return modal('prompt');
 }
 
@@ -213,7 +219,7 @@ export function confirmDialog(title, text, okLabel = 'OK') {
   return p;
 }
 
-/* --------------------------------------------------------- Kontextmenü */
+/* --------------------------------------------------------- Context menu */
 
 let ctxNode = null;
 export function contextMenu(x, y, items) {

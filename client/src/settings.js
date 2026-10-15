@@ -1,4 +1,4 @@
-/* Einstellungs-Dialog */
+/* Settings dialog */
 
 import { $, $$, modal, openModal, closeModal, toast } from './util.js';
 import { state, setSettings, DEFAULT_SETTINGS, emit, on } from './state.js';
@@ -16,6 +16,7 @@ const MAP = {
   'set-mainfile': 'mainFile',
   'set-shellescape': 'shellEscape',
   'set-showall': 'showAll',
+  'set-autosnapshots': 'autoSnapshots',
   'set-pdfzoom': 'pdfZoom',
   'set-sync': 'syncMode',
 };

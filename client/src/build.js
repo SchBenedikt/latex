@@ -1,4 +1,4 @@
-/* Build-System: WebSocket-Log, Consolenansicht, Problemliste, Auto-Build */
+/* Build system: WebSocket log, console view, problem list, auto build */
 
 import { api } from './api.js';
 import { state, emit, on } from './state.js';
@@ -47,7 +47,7 @@ function handleMessage(msg) {
   switch (msg.type) {
     case 'build:start':
       building = true;
-      setBuildStatus('busy', `Baue mit ${msg.engine} …`);
+      setBuildStatus('busy', `Building with ${msg.engine} …`);
       clearConsole();
       appendConsole('$ ' + msg.cmd + '\n', 'line-cmd');
       showBottom('console');
@@ -66,7 +66,7 @@ function handleMessage(msg) {
   }
 }
 
-/* -------------------------------------------------------------- Bauen */
+/* -------------------------------------------------------------- Build */
 
 export async function buildProject({ silent = false } = {}) {
   if (!state.project) { toast('No project selected', { type: 'warn' }); return; }
@@ -121,13 +121,13 @@ export async function buildProject({ silent = false } = {}) {
     const res = await api.build(project, body);
     if (state.project !== project || completedJobs.has(res.job)) return;
     building = true;
-    setBuildStatus('busy', 'Baue …');
+    setBuildStatus('busy', 'Building …');
     emit('build:queued', res);
     if (!silent) showBottom('console');
   } catch (e) {
     if (state.project !== project) return;
     building = false;
-    setBuildStatus('err', 'Build fehlgeschlagen');
+    setBuildStatus('err', 'Build failed');
     toast('Could not start build: ' + e.message, { type: 'err', ms: 5000 });
     appendConsole('\n[Editor] ' + e.message + '\n', 'line-err');
   }
@@ -136,7 +136,7 @@ export async function buildProject({ silent = false } = {}) {
 async function onBuildEnd(msg) {
   const ok = msg.status === 'ok';
   setBuildStatus(ok ? 'ok' : 'err',
-    ok ? `OK · ${fmtDuration(msg.duration)}${msg.stats?.pages ? ' · ' + msg.stats.pages + ' S.' : ''}`
+    ok ? `OK · ${fmtDuration(msg.duration)}${msg.stats?.pages ? ' · ' + msg.stats.pages + ' pp.' : ''}`
       : `Error · ${fmtDuration(msg.duration)}`);
 
   appendConsole(`\n[Editor] ${ok ? '✓ Build succeeded' : '✗ Build failed (Code ' + msg.code + ')'} · ${fmtDuration(msg.duration)}\n`,
@@ -229,7 +229,7 @@ export function clearConsole() {
   consoleLines = 0;
 }
 
-/* ------------------------------------------------------------ Probleme */
+/* ------------------------------------------------------------ Problems */
 
 export function renderProblems() {
   clear(problemsEl);
@@ -289,7 +289,7 @@ function updateStatusIssues() {
     : '<span style="color:var(--ok)">✓ 0</span>';
 }
 
-/* ---------------------------------------------------------- Statusleiste */
+/* ---------------------------------------------------------- Status bar */
 
 export function setBuildStatus(kind, text) {
   const elStatus = $('#st-build');
@@ -300,7 +300,7 @@ export function setBuildStatus(kind, text) {
   emit('build-status', { kind, text });
 }
 
-/* ------------------------------------------------------------ Auto-Build */
+/* ------------------------------------------------------------ Auto build */
 
 let autoBuildTimer = null;
 
@@ -314,7 +314,7 @@ export function scheduleAutoBuild() {
   }, Math.max(100, Math.min(10000, Number(state.settings.autoBuildDelay) || 900)));
 }
 
-/* ------------------------------------------------------- UI-Schnittstellen */
+/* ------------------------------------------------------- UI wiring */
 
 export function showBottom(tab = 'console') {
   const panel = $('#bottom-panel');
@@ -335,7 +335,7 @@ export function setBottomTab(name) {
 
 async function loadRawLog() {
   const out = $('#log-out');
-  out.textContent = 'Lade Log …';
+  out.textContent = 'Loading log …';
   try {
     const res = await api.log(state.project, state.settings.mainFile);
     out.textContent = res.log || 'No log available.';
